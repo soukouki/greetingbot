@@ -1,0 +1,2 @@
+# greetingbot
+a discord bot
