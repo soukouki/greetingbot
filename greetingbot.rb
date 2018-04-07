@@ -2,6 +2,8 @@
 CLIENT_ID = ARGV[0].to_i
 TOKEN = ARGV[1]
 
+require "timeout"
+
 require "discordrb"
 require "moji"
 
@@ -320,20 +322,28 @@ module GreetingCases
 				when 23, 0..10
 					["ふにゃー・・？。#{helpmsg}・・. . :zzz:"]
 				when 11..22
-					["#{greeting "こん"}・・。#{helpmsg}だよー"]
+					["#{ "こん"}・・。#{helpmsg}だよー"]
 				end
 			},
 		),
 		Pattern.new(
 			regexp: /^n\.help$/o,
 			responses: lambda{|t, md|
-				[
-					"#{greeting} Command List\n"+
-					"`n.help` : このコマンドです。\n"+
-					"`n.info` : このbotのことを教えてくれます。招待URLもこちらから。\n"+
-					"`n.test` : ボットの自動テストを実行します。\n"+
-					"\n`こん` と入力してみると？"
-				]
+				[<<~EOS]
+				Command List
+				`n.help`
+					このコマンドです。
+				`n.info`
+					このbotのことを教えてくれます。招待URLもこちらから。
+				`n.test`
+					ボットの自動テストを実行します。
+				`n.calc`
+					簡単な計算機。ダイズ記法に対応。
+					`n.calc bnf`
+						BNF式を表示します。
+				
+				`こん` と入力してみると？
+				EOS
 			},
 		),
 		Pattern.new(
@@ -350,6 +360,70 @@ module GreetingCases
 			add_process: lambda{|s|
 				((rand(2)==0)? greeting+"\n" : "")+s
 			},
+		),
+		Pattern.new(
+			regexp: /^n\.calc\s((.|\s)*)$/o,
+			responses: lambda do |t, md|
+				begin
+					require_relative "../dice.rb/dice"
+				rescue LoadError
+					puts <<~EOS
+						`../dice.rb`に https://github.com/soukouki/greetingbot を導入してください。
+					EOS
+					return [<<~EOS]
+						申し訳ありません。現在、計算機能は使用できません。
+						どうしても使いたい場合は、botの実行者へ連絡してください。
+					EOS
+				end
+				p text = md[1]
+				return [<<~EOS] if text.downcase == "bnf"
+					```BNF
+					expression := mul_div { ( "+" | "-" ) mul_div }
+					mul_div :=  pow { ( "*" | "/" ) pow }
+					pow := dice_int | dice_int "^" pow
+					dice_int := int_parentheses | int_parentheses "d" int_parentheses
+					int_parentheses := int | "(" expression ")"
+					int := int_l | ( "+" | "-" ) int_l
+					```
+				EOS
+				begin
+					Timeout::timeout(3) do
+						formula = Dice.new(text)
+						[<<~EOS]
+						`#{text.inspect}`の計算結果
+						
+						最大値 : #{formula.max}
+						最小値 : #{formula.min}
+						サンプル : #{formula.sample}
+						EOS
+					end
+				rescue Dice::DiceRuntimeError => err
+					[<<~EOS]
+					`#{text.inspect}`の計算結果
+					
+					**#{err}**
+					式の記述方法が間違っています。
+					
+					`1d10`
+						10面ダイズを一回振ります。
+					`1+2` `3-4` `5*6` `7/8`
+						見ての通り。
+						ただし、小数には対応していないため`7/8`は`0`になります。
+					`1/(1d2*2-3)`
+						こんな風にもできます。
+					`1/(1d2*2-2)`
+						このような式は、ゼロ除算の可能性があるため実行できません。
+					
+					2d2d2は成立しません。(2d2)d2または2d(2d2)と書いてください。
+					EOS
+				rescue Timeout::Error => err
+					[<<~EOS]
+					`#{text.inspect}`の計算結果
+					
+					タイムアウトしました。
+					EOS
+				end
+			end,
 		),
 		Pattern.new(
 			regexp: /^n\.test$/o,
@@ -381,6 +455,7 @@ module GreetingCases
 					"あ、どうもですー"=>true,
 					"あ、どもども"=>true,
 					"こ！ん！ば！ん！は！"=>true,
+					"電子そろばん？知らない子ですね"=>false,
 					# 寝ます系統
 					"ほどほどで寝ますｗ"=>false,
 					"寝ます"=>true,
@@ -475,6 +550,7 @@ module GreetingCases
 					"いーまーはーなーんーにーちーでーすーかー！"=>true,
 					"きょーはなんにぃち"=>true,
 					"今 は何 時 です？"=>true,
+					"今何分？"=>true,
 					# テストケース以上
 				}
 				sel = testcase
@@ -501,6 +577,7 @@ MAX_MSG_LENGTH = 50
 MAX_MSG_BACK_QUOTE_COUNT = 2
 
 bot.message{|event|
+	print "\r#{Time.now.strftime("%F %T %3N")} #{event.server.name} からのメッセージイベント      "
 	# 前処理など
 	content = event.content
 	isdebug = (content =~ /\Ad\d*-/)
@@ -511,13 +588,24 @@ bot.message{|event|
 		Time.now
 	end
 	
+	match_data = nil
 	# マッチ
-	match_data = GreetingCases.find(msg)
+	# バグっぽい何かがあるようなので
+	begin
+		Timeout::timeout 10 do
+			match_data = GreetingCases.find(msg)
+		end
+	rescue Timeout::Error
+		puts "timeout"
+		puts msg
+	end
 	
 	if match_data.nil?
 		puts "#{msg} => (マッチしませんでした)" if isdebug
 		next
 	end
+	
+	puts "" # 上のメッセージイベント通知の最後にputsがないため
 	
 	last_greeting_key = LastGreetingKey.new(event.channel, match_data.pattern)
 	last_greeting[last_greeting_key] ||= LastGreetingValue.new(Time.now-match_data.pattern.skip, nil)
@@ -566,10 +654,14 @@ bot.message{|event|
 bot.ready{|event|bot.game = "挨拶bot|n.help"}
 
 bot.server_create{|event|
+	puts "", event.server.name+"に参加しました。"
 	(event.server.default_channel||event.server.text_channels.first)
 		.send_message(
-			"#{GreetingCases.greeting}。詳しくは`n.help`にて！\n\n"+
-			"This bot does job only in Japanese text."
+			<<~EOS
+				#{GreetingCases.greeting}。詳しくは`n.help`にて！
+				
+				This bot will not operation outside of Japanese text.
+			EOS
 		)
 }
 
