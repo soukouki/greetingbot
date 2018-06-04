@@ -1,4 +1,4 @@
-
+﻿
 CLIENT_ID = ARGV[0].to_i
 TOKEN = ARGV[1]
 
@@ -6,9 +6,15 @@ require "timeout"
 
 require "discordrb"
 require "moji"
+require "romaji"
 
 module GreetingCases
 	module_function
+	
+	# once_in_times 3 => 3回に1回の確率でtrueそれ以外はfalse
+	def once_in_times times
+		rand(times) == 0
+	end
 	
 	class Pattern
 		attr_reader :regexp, :skip
@@ -101,15 +107,22 @@ module GreetingCases
 	end
 	
 	# 6倍の重りがついてしまうので、他を増やすか、.sampleをかけるように
+	# といっていたら`ん`の条件分岐のせいでなんとも言えないことに・・うーん
 	def add_nobi_or_nn_to_end str
 		[
 			str,
 			str+"ー",
-			str+"ん",
-			str+"んー",
-			str+"ん。",
-			str+"。",
-		]
+			str+"。"
+		]+
+		if str[-1] != "ん"
+			[
+				str+"ん",
+				str+"んー",
+				str+"ん。"
+			]
+		else
+			[]
+		end
 	end
 	def add_nobi_or_nn_to_end_length
 		6
@@ -119,26 +132,27 @@ module GreetingCases
 	nobi = /([ぁぃぅぇぉっ]|#{sink})+/
 	na = ->{
 		["ハロロース！"]+
-		((rand(2)==0)? ["なー", "なー！"] : [])+
-		((rand(6)==0)? ["ハロロロース！"] : [])+
-		((rand(10)==0)? ["ハムロース！"] : [])+
+		((rand(2)==0)? ["なー", "なー！", "はにゃー！"] : [])+
+		((rand(6)==0)? ["ハロロロース！", "はっにゃにゃー！", "はっにゃー！"] : [])+
+		((rand(10)==0)? ["ハムロース！", "はにゃにゃにゃにゃーー！"] : [])+
 		((rand(30)==0)? ["豚ロース！"] : [])+
 		((rand(100)==0)? ["ロースかつ丼"] : [])+
 		[]
 	}
 	morning = ->{
-		["おはようですー", "あ、おはようですー", "おっはー", "おはー"]+
+		["おはようですー", "あ、おはようですー", "おっはー", "おはー", "おはようございますー！"]+
 		((rand(4)==0)? ["おはようなぎ"] : [])
 		na.()
 	}
 	daytime = ->{
-		["あ、こん", "こんですー", "こんにちはー", "やっはろー", "はろー！"]+
+		["あ、こん", "こんですー", "こんにちはー", "やっはろー", "はろー！", "こんにちはー！"]+
+		((rand(4)==0)? ["こんスタンティノープル"] : [])
 		((rand(10)==0)? ["cons"] : [])+
 		na.()
 	}
 	night = ->{
-		["こんですー", "あ、こんですー", "こんばんはー"]+
-		["こんばんわに", "こんばんわんこ"].select{rand(4)==1}+
+		["こんですー", "あ、こんですー", "こんばんはー", "こんばんはー！"]+
+		["こんばんわに", "こんばんわんこ"].select{rand(8)==1}+
 		na.()
 	}
 	good_night = ->{
@@ -158,19 +172,23 @@ module GreetingCases
 				when 4..10
 					morning.()
 				when 11..12
-					["おそよー、もう#{roughly_time_to_s(t)}ですよー", "おそようですー"]+na.().select{rand(1)==0}
+					["おそよー、もう#{roughly_time_to_s(t)}ですよー", "おそようですー"]+
+					na.().select{rand(1)==0}
 				when 13..15
-					["もう昼過ぎですよー", "おそようですー"]+na.().select{rand(1)==0}
+					["もう昼過ぎですよー", "おそようですー"]+
+					na.().select{rand(1)==0}
 				when 16..17
-					["もう夕方ですよー", "えっと、今は#{roughly_time_to_s(t)}ですが・・"]+na.().select{rand(1)==0}
+					["もう夕方ですよー", "えっと、今は#{roughly_time_to_s(t)}ですが・・"]+
+					na.().select{rand(1)==0}
 				else
-					["えっと、今は夜ですよ・・？まさか・・・", "えっと、今は#{roughly_time_to_s(t)}ですが・・"]+na.().select{rand(1)==0}
+					["えっと、今は夜ですよ・・？まさか・・・", "えっと、今は#{roughly_time_to_s(t)}ですが・・"]+
+					na.().select{rand(1)==0}
 				end
 			},
 		),
 		Pattern.new(
 			regexp: /
-				こ#{sink}?ん(#{nobi}|に?(ち|#{nobi})|です)|(^|#{nobi}|#{sink})こん$|
+				こ#{nobi}?ん#{nobi}?(に#{nobi}?(#{nobi}|ち)|ち|です)|(^|#{nobi}|#{sink})こん$|
 				(^|#{sink})(?<!こー)ど(う|#{nobi}|)も|
 				^.{,5}(hello|はろ).{,5}$|
 				^(hi#{sink}?|ひ)$|
@@ -188,14 +206,14 @@ module GreetingCases
 			}
 		),
 		Pattern.new(
-			regexp: /こんば#{nobi}?$|ばん(わ|は|#{nobi})/o,
+			regexp: /こ#{nobi}?ん#{nobi}?ば#{nobi}?$|ば#{nobi}?ん#{nobi}?(わ|は|#{nobi})/o,
 			skip: 60,
 			responses: lambda{|t, md|
 				case t.hour
 				when 16..23, 0..3
 					night.()
 				when 4..9
-					["もう朝ですー", "もう#{roughly_time_to_s(t)}ですよー"]+
+					["もう朝ですー", "もう#{roughly_time_to_s(t)}ですよー", "・・・チュンチュン:bird:"]+
 					na.().select{rand(2)==0} # na側を減らしてもう朝です側を少し増やす
 				else
 					["もう昼ですー！", "#{roughly_time_to_s(t)}ですよー！"]+
@@ -264,8 +282,9 @@ module GreetingCases
 		Pattern.new(
 			regexp: /ただい?ま(?![はかと])|(もど|もっど|戻)(り($|だ|で|まし|#{nobi})|#{nobi}?$)/o,
 			responses: lambda{|t, md|
-				["あ、おかえりですー", "おかえりですー", "おかかー"]+
-				["おっかかー", "おかかおいしいよね"].select{rand(2)==0}
+				["あ、おかえりですー", "おかえりですー", "おかかー", "おかえりなさいませー！"]+
+				["おっかかー", "おかかですー"].select{rand(2)==0}+
+				["おかかおいしいよね"].select{rand(5)==0}
 			},
 		),
 		Pattern.new(
@@ -298,7 +317,21 @@ module GreetingCases
 			},
 		),
 		Pattern.new(
-			regexp: /(今|い#{nobi}?ま)#{nobi}?は?#{nobi}?(何|な#{nobi}?ん)#{nobi}?(時|じ)/o,
+			regexp: /(今|い#{nobi}?ま)#{nobi}?は?#{nobi}?(何|な#{nobi}?ん)#{nobi}?(分|ふん|秒|びょう)/o,
+			responses: lambda{|t, md|
+				add_nobi_or_nn_to_end("今は#{t.hour}時#{t.min}分#{t.sec}秒です")+
+				add_nobi_or_nn_to_end("今は#{t.hour}時#{t.min}分#{t.sec}秒・・・です")+
+				add_nobi_or_nn_to_end("今は#{t.hour}時#{t.min}分#{t.sec}秒です・・たぶん")+
+				add_nobi_or_nn_to_end("今は#{t.hour}時#{t.min}分#{t.sec}秒・・・です・・たぶん")+
+				add_nobi_or_nn_to_end("今は#{t.hour}時#{t.min}分#{t.sec}秒・・・たぶん")+
+				add_nobi_or_nn_to_end("今は#{t.hour}時#{t.min}分#{t.sec}秒のはず・・です")+
+				add_nobi_or_nn_to_end("今は#{t.hour}時#{t.min}分#{t.sec}秒のはず・・です・・・たぶん")+
+				add_nobi_or_nn_to_end("今は#{t.hour}時#{t.min}分#{t.sec}秒のはず・・・たぶん")+
+				[]
+			},
+		),
+		Pattern.new(
+			regexp: /(今|い#{nobi}?ま)#{nobi}?は?#{nobi}?(何|な#{nobi}?ん)#{nobi}?(時|じ|どき)/o,
 			responses: lambda{|t, md|
 				add_nobi_or_nn_to_end("#{roughly_time_to_s(t)}です").map{|s|s+"\n`#{t}`"}
 			},
@@ -322,7 +355,7 @@ module GreetingCases
 				when 23, 0..10
 					["ふにゃー・・？。#{helpmsg}・・. . :zzz:"]
 				when 11..22
-					["#{ "こん"}・・。#{helpmsg}だよー"]
+					["#{greeting}・・。#{helpmsg}だよー"]
 				end
 			},
 		),
@@ -368,7 +401,8 @@ module GreetingCases
 					require_relative "../dice.rb/dice"
 				rescue LoadError
 					puts <<~EOS
-						`../dice.rb`に https://github.com/soukouki/greetingbot を導入してください。
+						`../dice.rb`に https://github.com/soukouki/dice.rb を導入し、
+						このファイルの相対パスとして、`../dice.rb/dice` が読み込める状況にしてください。
 					EOS
 					return [<<~EOS]
 						申し訳ありません。現在、計算機能は使用できません。
@@ -455,7 +489,9 @@ module GreetingCases
 					"あ、どうもですー"=>true,
 					"あ、どもども"=>true,
 					"こ！ん！ば！ん！は！"=>true,
-					"電子そろばん？知らない子ですね"=>false,
+					"電子そろばん？"=>false,
+					"こんにゃく"=>false,
+					"こんどは"=>false,
 					# 寝ます系統
 					"ほどほどで寝ますｗ"=>false,
 					"寝ます"=>true,
@@ -551,6 +587,8 @@ module GreetingCases
 					"きょーはなんにぃち"=>true,
 					"今 は何 時 です？"=>true,
 					"今何分？"=>true,
+					"いまなんどきだい？"=>true,
+					"いまは何秒？"=>true,
 					# テストケース以上
 				}
 				sel = testcase
@@ -577,7 +615,7 @@ MAX_MSG_LENGTH = 50
 MAX_MSG_BACK_QUOTE_COUNT = 2
 
 bot.message{|event|
-	print "\r#{Time.now.strftime("%F %T %3N")} #{event.server.name} からのメッセージイベント      "
+	print "\r#{Time.now.strftime("%F %T %3N")} @#{event.author.name} : #{event.server.name} # #{event.channel.name} からのメッセージイベント      "
 	# 前処理など
 	content = event.content
 	isdebug = (content =~ /\Ad\d*-/)
@@ -596,23 +634,30 @@ bot.message{|event|
 			match_data = GreetingCases.find(msg)
 		end
 	rescue Timeout::Error
-		puts "timeout"
+		puts "*** timeout ***"
 		puts msg
 	end
+	
+	Timeout::timeout 10 do
+		match_data = GreetingCases.find(Romaji.romaji2kana(msg))
+		unless match_data.nil?
+			puts "\n#{msg} => ローマ字に変換したらマッチしたよ!"
+		end
+	end if match_data.nil?
 	
 	if match_data.nil?
 		puts "#{msg} => (マッチしませんでした)" if isdebug
 		next
 	end
 	
-	puts "" # 上のメッセージイベント通知の最後にputsがないため
+	print "\n" # 上のメッセージイベント通知の最後にputsがないため
 	
 	last_greeting_key = LastGreetingKey.new(event.channel, match_data.pattern)
 	last_greeting[last_greeting_key] ||= LastGreetingValue.new(Time.now-match_data.pattern.skip, nil)
 	puts content+" : デバッグモード。skip判定を飛ばします" if isdebug
 	
 	# スキップ処理
-	puts "\nregexp : #{match_data.pattern.regexp}" if isdebug
+	puts "regexp : #{match_data.pattern.regexp}" if isdebug
 	
 	unless bot.profile.on(event.server).permission?(:send_messages, event.channel)
 		puts "#{msg} => (#{event.server.name}の#{event.channel.name}ではbotの権限が足りないためカット)"
@@ -631,7 +676,7 @@ bot.message{|event|
 		next
 	end
 	if (Time.now-match_data.pattern.skip < last_greeting[last_greeting_key].time) && !isdebug
-		puts "#{msg} => (#{event.server.name}の#{event.channel.name}では前回の挨拶から#{match[:skip]}秒以内のためカット)"
+		puts "#{msg} => (#{event.server.name}の#{event.channel.name}では前回の挨拶から#{match_data[:skip]}秒以内のためカット)"
 		next
 	end
 	
@@ -646,7 +691,7 @@ bot.message{|event|
 	# 後処理
 	last_greeting[last_greeting_key] = LastGreetingValue.new(Time.now, response)
 	puts time
-	puts msg+" => "+response
+	puts "#{msg}\n=> #{response}"
 	event.respond match_data.pattern.add_process(response)
 }
 
@@ -660,7 +705,7 @@ bot.server_create{|event|
 			<<~EOS
 				#{GreetingCases.greeting}。詳しくは`n.help`にて！
 				
-				This bot will not operation outside of Japanese text.
+				This bot doesn't run outside of Japanese text.
 			EOS
 		)
 }
