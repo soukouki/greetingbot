@@ -11,14 +11,24 @@ require "romaji"
 module GreetingCases
 	module_function
 	
-	# once_in_times 3 => 3回に1回の確率でtrueそれ以外はfalse
-	def once_in_times times
-		rand(times) == 0
+	refine Array do
+		# select{rand(n)==0}
+		def select_rand n
+			self.select{rand(n) == 0}
+		end
 	end
+	using self
+	
+	refine Time do
+		def weekday
+			%w[日 月 日 水 木 金 土][wday]
+		end
+	end
+	using self
 	
 	class Pattern
 		attr_reader :regexp, :skip
-		def initialize regexp:, skip: 0, responses:, add_process: ->(s){s}
+		def initialize regexp:, skip: 0, responses:, add_process: ->(s, t){s}
 			@regexp = regexp
 			@skip = skip
 			@responses = responses
@@ -38,8 +48,8 @@ module GreetingCases
 		def responses time, match_data
 			@responses.call(time, match_data)
 		end
-		def add_process text
-			@add_process.call(text)
+		def add_process text, time
+			@add_process.call(text, time)
 		end
 	end
 	
@@ -132,37 +142,42 @@ module GreetingCases
 	nobi = /([ぁぃぅぇぉっ]|#{sink})+/
 	na = ->{
 		["ハロロース！"]+
-		((rand(2)==0)? ["なー", "なー！", "はにゃー！"] : [])+
-		((rand(6)==0)? ["ハロロロース！", "はっにゃにゃー！", "はっにゃー！"] : [])+
-		((rand(10)==0)? ["ハムロース！", "はにゃにゃにゃにゃーー！"] : [])+
-		((rand(30)==0)? ["豚ロース！"] : [])+
-		((rand(100)==0)? ["ロースかつ丼"] : [])+
+		["なー", "なー！", "はにゃー！"].select_rand(2)+
+		["ハロロロース！", "はっにゃにゃー！", "はっにゃー！"].select_rand(8)+
+		["ハムロース！", "はにゃにゃにゃにゃーー！"].select_rand(15)+
+		["豚ロース！"].select_rand(30)+
+		["ロースかつ丼"].select_rand(100)+
 		[]
 	}
 	morning = ->{
 		["おはようですー", "あ、おはようですー", "おっはー", "おはー", "おはようございますー！"]+
-		((rand(4)==0)? ["おはようなぎ"] : [])
+		["おはようなぎ"].select_rand(4)
 		na.()
 	}
 	daytime = ->{
 		["あ、こん", "こんですー", "こんにちはー", "やっはろー", "はろー！", "こんにちはー！"]+
-		((rand(4)==0)? ["こんスタンティノープル"] : [])
-		((rand(10)==0)? ["cons"] : [])+
+		["こんスタンティノープル"].select_rand(4)
+		["cons"].select_rand(10)+
 		na.()
 	}
 	night = ->{
 		["こんですー", "あ、こんですー", "こんばんはー", "こんばんはー！"]+
-		["こんばんわに", "こんばんわんこ"].select{rand(8)==1}+
+		["こんばんわに", "こんばんわんこ"].select_rand(8)+
 		na.()
 	}
 	good_night = ->{
 		["おやすみですー", "おやすみなさいですー", "おつです。おやすみですー", "おつかれさまでした！"]+
-		["おやすみんみんぜみー"].select{rand(3)==0}
+		["おやすみんみんぜみー"].select_rand(3)
 	}
 	late_night_drop = ->{
 		["長時間お疲れ様ですー！", ".....:zzz:"]+
-		good_night.().select{rand(2)==0}
+		good_night.().select_rand(2)
 	}
+	tabunn_nohazu = [
+		"です", "・・・です", "です・・たぶん", "・・・です・・たぶん", "・・・たぶん",
+		"のはず・・です", "のはず・・です・・・たぶん", "のはず・・・たぶん"
+	]
+	
 	CASES = [
 		Pattern.new(
 			regexp: /おっ?#{sink}?は($|#{nobi}|よ)/o,
@@ -171,18 +186,15 @@ module GreetingCases
 				case t.hour
 				when 4..10
 					morning.()
-				when 11..12
-					["おそよー、もう#{roughly_time_to_s(t)}ですよー", "おそようですー"]+
-					na.().select{rand(1)==0}
-				when 13..15
-					["もう昼過ぎですよー", "おそようですー"]+
-					na.().select{rand(1)==0}
+				when 11..15
+					["もう#{roughly_time_to_s(t)}ですよー", "おそようですー"]+
+					na.().select_rand(2)
 				when 16..17
 					["もう夕方ですよー", "えっと、今は#{roughly_time_to_s(t)}ですが・・"]+
-					na.().select{rand(1)==0}
+					na.().select_rand(2)
 				else
 					["えっと、今は夜ですよ・・？まさか・・・", "えっと、今は#{roughly_time_to_s(t)}ですが・・"]+
-					na.().select{rand(1)==0}
+					na.().select_rand(2)
 				end
 			},
 		),
@@ -206,7 +218,9 @@ module GreetingCases
 			}
 		),
 		Pattern.new(
-			regexp: /こ#{nobi}?ん#{nobi}?ば#{nobi}?$|ば#{nobi}?ん#{nobi}?(わ|は|#{nobi})/o,
+			regexp: /
+				こ#{nobi}?ん#{nobi}?ば#{nobi}?$|
+				(^|#{nobi})ば#{nobi}?ん#{nobi}?(わ|は|#{nobi})/xo,
 			skip: 60,
 			responses: lambda{|t, md|
 				case t.hour
@@ -214,15 +228,18 @@ module GreetingCases
 					night.()
 				when 4..9
 					["もう朝ですー", "もう#{roughly_time_to_s(t)}ですよー", "・・・チュンチュン:bird:"]+
-					na.().select{rand(2)==0} # na側を減らしてもう朝です側を少し増やす
+					na.().select_rand(2) # na側を減らしてもう朝です側を少し増やす
 				else
 					["もう昼ですー！", "#{roughly_time_to_s(t)}ですよー！"]+
-					na.().select{rand(1)==0}
+					na.().select_rand(1)
 				end
 			},
 		),
 		Pattern.new(
-			regexp: /(では|じゃ(ぁ|あ|))(おつ|乙)|(?<!が)(落|お)ち($|ま|る([わねか]))|^(落|お)ちる(?!に)/o,
+			regexp: /
+				(では|じゃ(ぁ|あ|))(おつ|乙)|
+				(?<!が)(落|お)ち($|ま|る([わねか]))|
+				^(落|お)ちる(?!に)/xo,
 			responses: lambda{|t, md|
 				case t.hour
 				when 21..23, 0..1
@@ -243,7 +260,7 @@ module GreetingCases
 				osoyo =
 					["おそよー", "おそよーですー", "おそようですー"]+
 					add_nobi_or_nn_to_end("まだ#{roughly_time_to_s(t)}ですよ").select{rand(add_nobi_or_nn_to_end_length/2)==0}+ # 2つ分残るように
-					na.().select{rand(2)==0}
+					na.().select_rand(2)
 				case t.hour
 				when 20..23, 0..1
 					good_night.()+["あ、おやすみですー", "自分はまだ起きてますねー"]
@@ -276,15 +293,16 @@ module GreetingCases
 			skip: 300, # 挨拶は若干遅れてもやると思うので、skip:は長め
 			responses: lambda{|t, md|
 				["はっじめまっしてー！", "初めましてー", "はじめましてですー", "よろしくー！", "よろしくですー！"]+
-				na.().select{rand(4)==0}
+				na.().select_rand(4)
 			},
 		),
 		Pattern.new(
 			regexp: /ただい?ま(?![はかと])|(もど|もっど|戻)(り($|だ|で|まし|#{nobi})|#{nobi}?$)/o,
 			responses: lambda{|t, md|
 				["あ、おかえりですー", "おかえりですー", "おかかー", "おかえりなさいませー！"]+
-				["おっかかー", "おかかですー"].select{rand(2)==0}+
-				["おかかおいしいよね"].select{rand(5)==0}
+				["おっかかー", "おかかですー"].select_rand(2)+
+				["おかかおいしいよね"].select_rand(5)+
+				["おかえりなさいませ。ご主人様。"].select_rand(50)
 			},
 		),
 		Pattern.new(
@@ -300,46 +318,47 @@ module GreetingCases
 					"あーいってらっしゃいですー",
 					"いってらっさいー！",
 					"いってらっさいですー",
-					"いってらっさいですんー"
+					"いってらっさいですんー",
 				]
 			},
 		),
 		Pattern.new(
 			regexp: /\A\^\^\#\z/o,
 			responses: lambda{|t, md|
-				["かわいいにゃ", "かわいいにゃん"]
+				["かわいいにゃ", "かわいいにゃー...", "にゃぁ～....ってあっ！"]
 			},
 		),
 		Pattern.new(
 			regexp: /\Aせや\z/o,
 			responses: lambda{|t, md|
-				["なー"]
+				["なー", "なー！"]
 			},
 		),
 		Pattern.new(
 			regexp: /(今|い#{nobi}?ま)#{nobi}?は?#{nobi}?(何|な#{nobi}?ん)#{nobi}?(分|ふん|秒|びょう)/o,
 			responses: lambda{|t, md|
-				add_nobi_or_nn_to_end("今は#{t.hour}時#{t.min}分#{t.sec}秒です")+
-				add_nobi_or_nn_to_end("今は#{t.hour}時#{t.min}分#{t.sec}秒・・・です")+
-				add_nobi_or_nn_to_end("今は#{t.hour}時#{t.min}分#{t.sec}秒です・・たぶん")+
-				add_nobi_or_nn_to_end("今は#{t.hour}時#{t.min}分#{t.sec}秒・・・です・・たぶん")+
-				add_nobi_or_nn_to_end("今は#{t.hour}時#{t.min}分#{t.sec}秒・・・たぶん")+
-				add_nobi_or_nn_to_end("今は#{t.hour}時#{t.min}分#{t.sec}秒のはず・・です")+
-				add_nobi_or_nn_to_end("今は#{t.hour}時#{t.min}分#{t.sec}秒のはず・・です・・・たぶん")+
-				add_nobi_or_nn_to_end("今は#{t.hour}時#{t.min}分#{t.sec}秒のはず・・・たぶん")+
-				[]
+				tabunn_nohazu
+			},
+			add_process: lambda{|s, t|
+				"#{roughly_time_to_s(t)}の#{t.min}分#{t.sec}秒#{s}"
 			},
 		),
 		Pattern.new(
 			regexp: /(今|い#{nobi}?ま)#{nobi}?は?#{nobi}?(何|な#{nobi}?ん)#{nobi}?(時|じ|どき)/o,
 			responses: lambda{|t, md|
-				add_nobi_or_nn_to_end("#{roughly_time_to_s(t)}です").map{|s|s+"\n`#{t}`"}
+				tabunn_nohazu
+			},
+			add_process: lambda{|s, t|
+				"#{roughly_time_to_s(t)}#{s}"
 			},
 		),
 		Pattern.new(
 			regexp: /(今|い#{nobi}?ま|今日|き#{nobi}?ょ(#{nobi}?う)?)#{nobi}?は?#{nobi}?(何|な#{nobi}?ん)#{nobi}?(日|に#{nobi}?ち)/o,
 			responses: lambda{|t, md|
-				add_nobi_or_nn_to_end("今日は#{t.day}日です").map{|s|s+"\n`#{t}`"}
+				tabunn_nohazu
+			},
+			add_process: lambda{|s, t|
+				"#{t.year}年#{t.month}月#{t.day}日で#{t.weekday}曜日#{s}"
 			},
 		),
 		Pattern.new(
@@ -370,10 +389,6 @@ module GreetingCases
 					このbotのことを教えてくれます。招待URLもこちらから。
 				`n.test`
 					ボットの自動テストを実行します。
-				`n.calc`
-					簡単な計算機。ダイズ記法に対応。
-					`n.calc bnf`
-						BNF式を表示します。
 				
 				`こん` と入力してみると？
 				EOS
@@ -387,77 +402,16 @@ module GreetingCases
 					"おはよう、こんにちは、落ちます、おやすみ、初めまして、ただいま、行ってきます いま何時？ 今日何日？ に対応してます。",
 					"`^^#` `せや`", "連続だと反応しないようにしてあるものもあります。",
 					"`d[聞く時間]-おはよう`でその時間の返事が聞けます。",
-				]+
-				["招待URLはこちら！ https://discordapp.com/oauth2/authorize?client_id=394876010438328321&scope=bot&permissions=2048"]*2
+				]
 			},
-			add_process: lambda{|s|
-				((rand(2)==0)? greeting+"\n" : "")+s
-			},
-		),
-		Pattern.new(
-			regexp: /^n\.calc\s((.|\s)*)$/o,
-			responses: lambda do |t, md|
-				begin
-					require_relative "../dice.rb/dice"
-				rescue LoadError
-					puts <<~EOS
-						`../dice.rb`に https://github.com/soukouki/dice.rb を導入し、
-						このファイルの相対パスとして、`../dice.rb/dice` が読み込める状況にしてください。
-					EOS
-					return [<<~EOS]
-						申し訳ありません。現在、計算機能は使用できません。
-						どうしても使いたい場合は、botの実行者へ連絡してください。
-					EOS
-				end
-				p text = md[1]
-				return [<<~EOS] if text.downcase == "bnf"
-					```BNF
-					expression := mul_div { ( "+" | "-" ) mul_div }
-					mul_div :=  pow { ( "*" | "/" ) pow }
-					pow := dice_int | dice_int "^" pow
-					dice_int := int_parentheses | int_parentheses "d" int_parentheses
-					int_parentheses := int | "(" expression ")"
-					int := int_l | ( "+" | "-" ) int_l
-					```
+			add_process: lambda{|s, t|
+				<<~EOS
+				#{((rand(2)==0)? greeting+"\n" : "")}#{s}
+				
+				
+				招待URLはこちら！ https://discordapp.com/oauth2/authorize?client_id=394876010438328321&scope=bot&permissions=2048
 				EOS
-				begin
-					Timeout::timeout(3) do
-						formula = Dice.new(text)
-						[<<~EOS]
-						`#{text.inspect}`の計算結果
-						
-						最大値 : #{formula.max}
-						最小値 : #{formula.min}
-						サンプル : #{formula.sample}
-						EOS
-					end
-				rescue Dice::DiceRuntimeError => err
-					[<<~EOS]
-					`#{text.inspect}`の計算結果
-					
-					**#{err}**
-					式の記述方法が間違っています。
-					
-					`1d10`
-						10面ダイズを一回振ります。
-					`1+2` `3-4` `5*6` `7/8`
-						見ての通り。
-						ただし、小数には対応していないため`7/8`は`0`になります。
-					`1/(1d2*2-3)`
-						こんな風にもできます。
-					`1/(1d2*2-2)`
-						このような式は、ゼロ除算の可能性があるため実行できません。
-					
-					2d2d2は成立しません。(2d2)d2または2d(2d2)と書いてください。
-					EOS
-				rescue Timeout::Error => err
-					[<<~EOS]
-					`#{text.inspect}`の計算結果
-					
-					タイムアウトしました。
-					EOS
-				end
-			end,
+			},
 		),
 		Pattern.new(
 			regexp: /^n\.test$/o,
@@ -476,6 +430,7 @@ module GreetingCases
 					"zzz"=>true,
 					":zzz:"=>true,
 					"おーはーよー"=>true,
+					"おはざまー"=>true,
 					# こんなど
 					"かばんさんこんですー"=>true,
 					"アイコン"=>false,
@@ -492,6 +447,8 @@ module GreetingCases
 					"電子そろばん？"=>false,
 					"こんにゃく"=>false,
 					"こんどは"=>false,
+					"あ、ばんはー"=>true,
+					"ばん！"=>true,
 					# 寝ます系統
 					"ほどほどで寝ますｗ"=>false,
 					"寝ます"=>true,
@@ -615,7 +572,7 @@ MAX_MSG_LENGTH = 50
 MAX_MSG_BACK_QUOTE_COUNT = 2
 
 bot.message{|event|
-	print "\r#{Time.now.strftime("%F %T %3N")} @#{event.author.name} : #{event.server.name} # #{event.channel.name} からのメッセージイベント      "
+	puts "#{Time.now.strftime("%F %T %3N")} @#{event.author.name} : #{event.server.name} ##{event.channel.name}"
 	# 前処理など
 	content = event.content
 	isdebug = (content =~ /\Ad\d*-/)
@@ -624,6 +581,11 @@ bot.message{|event|
 		Time.local(2000, nil, nil, msg.match(/\Ad(\d+)-/)[1].to_i)
 	else
 		Time.now
+	end
+	
+	if msg.length>=(MAX_MSG_LENGTH*2) && !isdebug
+		puts "(#{MAX_MSG_LENGTH*2}文字を超えるメッセージのためカット(処理軽減のため早期カット))"
+		next
 	end
 	
 	match_data = nil
@@ -641,7 +603,7 @@ bot.message{|event|
 	Timeout::timeout 10 do
 		match_data = GreetingCases.find(Romaji.romaji2kana(msg))
 		unless match_data.nil?
-			puts "\n#{msg} => ローマ字に変換したらマッチしたよ!"
+			puts "#{msg} => ローマ字に変換したらマッチしたよ!"
 		end
 	end if match_data.nil?
 	
@@ -649,8 +611,6 @@ bot.message{|event|
 		puts "#{msg} => (マッチしませんでした)" if isdebug
 		next
 	end
-	
-	print "\n" # 上のメッセージイベント通知の最後にputsがないため
 	
 	last_greeting_key = LastGreetingKey.new(event.channel, match_data.pattern)
 	last_greeting[last_greeting_key] ||= LastGreetingValue.new(Time.now-match_data.pattern.skip, nil)
@@ -692,11 +652,11 @@ bot.message{|event|
 	last_greeting[last_greeting_key] = LastGreetingValue.new(Time.now, response)
 	puts time
 	puts "#{msg}\n=> #{response}"
-	event.respond match_data.pattern.add_process(response)
+	event.respond match_data.pattern.add_process(response, time)
 }
 
 
-bot.ready{|event|bot.game = "挨拶bot|n.help"}
+bot.ready{|event|bot.game = "挨拶bot|n.help 導入サーバー数#{bot.servers.count}"}
 
 bot.server_create{|event|
 	puts "", event.server.name+"に参加しました。"
@@ -705,7 +665,7 @@ bot.server_create{|event|
 			<<~EOS
 				#{GreetingCases.greeting}。詳しくは`n.help`にて！
 				
-				This bot doesn't run outside of Japanese text.
+				This bot run only Japanese text.
 			EOS
 		)
 }
