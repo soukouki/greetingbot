@@ -1,6 +1,2 @@
 # greetingbot
-a discord bot
-
-```bash
-gem install discordrb romaji moji
-```
+This is a my discord bot.
