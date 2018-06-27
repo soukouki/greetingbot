@@ -49,7 +49,7 @@ module GreetingCases
 		def roughly_min
 			hour12 = hour % 12
 			nexthour12 = (hour+1) % 12
-			case time.min
+			case min
 			when 0..1
 				"#{hour12}時ちょうど"
 			when 2..5
