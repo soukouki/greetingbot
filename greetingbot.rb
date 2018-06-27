@@ -1,6 +1,8 @@
 ﻿
-CLIENT_ID = ARGV[0].to_i
+CLIENT_ID = ARGV[0].to_i # bot内部の変数をメタプログラミングで取り出せばなくせる
 TOKEN = ARGV[1]
+TESTMODE = ARGV[2] == "-t"
+puts "[client_id] [token] [|-t]"
 
 require "timeout"
 
@@ -22,6 +24,62 @@ module GreetingCases
 	refine Time do
 		def weekday
 			%w[日 月 日 水 木 金 土][wday]
+		end
+		
+		def roughly_time_slot
+			case hour
+			when 4..5
+				"早朝"
+			when 6..9
+				"朝"
+			when 10..11
+				"昼前"
+			when 12..14
+				"昼"
+			when 15
+				"おやつ"
+			when 16..18
+				"夕方"
+			when 19..23
+				"夜"
+			when 0..3
+				"深夜"
+			end
+		end
+		def roughly_min
+			hour12 = hour % 12
+			nexthour12 = (hour+1) % 12
+			case time.min
+			when 0..1
+				"#{hour12}時ちょうど"
+			when 2..5
+				"#{hour12}時"
+			when 6..11
+				"#{hour12}時すぎ"
+			when 12..18
+				"#{hour12}時15分"
+			when 19..24
+				"#{hour12}時半まえ"
+			when 25..27
+				"#{hour12}時半"
+			when 28..32
+				"#{hour12}時半ちょうど"
+			when 33..35
+				"#{hour12}時半"
+			when 36..41
+				"#{hour12}時半すぎ"
+			when 42..48
+				"#{hour12}時45分"
+			when 49..54
+				"#{nexthour12}時まえ"
+			when 55..58
+				"#{nexthour12}時"
+			when 59..60
+				"#{nexthour12}時ちょうど"
+			end
+		end
+		def roughly_time
+			roughly_time_slot + "の" + roughly_min
 		end
 	end
 	using self
@@ -66,55 +124,6 @@ module GreetingCases
 		md.pattern.responses(Time.now, md.match_data).sample
 	end
 	
-	def roughly_time_to_s time
-		hour = time.hour % 12
-		nexthour = (time.hour+1) % 12
-		(case time.hour
-		when 4..5
-			"早朝"
-		when 6..9
-			"朝"
-		when 10..11
-			"昼前"
-		when 12..14
-			"昼"
-		when 15
-			"おやつ"
-		when 16..18
-			"夕方"
-		when 19..23
-			"夜"
-		when 0..3
-			"深夜"
-		end + "の" + case time.min
-		when 0..1
-			"#{hour}時ちょうど"
-		when 2..5
-			"#{hour}時"
-		when 6..11
-			"#{hour}時すぎ"
-		when 12..18
-			"#{hour}時15分"
-		when 19..24
-			"#{hour}時半まえ"
-		when 25..27
-			"#{hour}時半"
-		when 28..32
-			"#{hour}時半ちょうど"
-		when 33..35
-			"#{hour}時半"
-		when 36..41
-			"#{hour}時半すぎ"
-		when 42..48
-			"#{hour}時45分"
-		when 49..54
-			"#{nexthour}時まえ"
-		when 55..58
-			"#{nexthour}時"
-		when 59..60
-			"#{nexthour}時ちょうど"
-		end)
-	end
 	
 	# 6倍の重りがついてしまうので、他を増やすか、.sampleをかけるように
 	# といっていたら`ん`の条件分岐のせいでなんとも言えないことに・・うーん
@@ -187,13 +196,13 @@ module GreetingCases
 				when 4..10
 					morning.()
 				when 11..15
-					["もう#{roughly_time_to_s(t)}ですよー", "おそようですー"]+
+					["もう#{t.roughly_time}ですよー", "おそようですー"]+
 					na.().select_rand(2)
 				when 16..17
-					["もう夕方ですよー", "えっと、今は#{roughly_time_to_s(t)}ですが・・"]+
+					["もう夕方ですよー", "えっと、今は#{t.roughly_time}ですが・・"]+
 					na.().select_rand(2)
 				else
-					["えっと、今は夜ですよ・・？まさか・・・", "えっと、今は#{roughly_time_to_s(t)}ですが・・"]+
+					["えっと、今は夜ですよ・・？まさか・・・", "えっと、今は#{t.roughly_time}ですが・・"]+
 					na.().select_rand(2)
 				end
 			},
@@ -227,10 +236,10 @@ module GreetingCases
 				when 16..23, 0..3
 					night.()
 				when 4..9
-					["もう朝ですー", "もう#{roughly_time_to_s(t)}ですよー", "・・・チュンチュン:bird:"]+
+					["もう朝ですー", "もう#{t.roughly_time}ですよー", "・・・チュンチュン:bird:"]+
 					na.().select_rand(2) # na側を減らしてもう朝です側を少し増やす
 				else
-					["もう昼ですー！", "#{roughly_time_to_s(t)}ですよー！"]+
+					["もう昼ですー！", "#{t.roughly_time}ですよー！"]+
 					na.().select_rand(1)
 				end
 			},
@@ -259,7 +268,7 @@ module GreetingCases
 			responses: lambda{|t, md|
 				osoyo =
 					["おそよー", "おそよーですー", "おそようですー"]+
-					add_nobi_or_nn_to_end("まだ#{roughly_time_to_s(t)}ですよ").select{rand(add_nobi_or_nn_to_end_length/2)==0}+ # 2つ分残るように
+					add_nobi_or_nn_to_end("まだ#{t.roughly_time}ですよ").select{rand(add_nobi_or_nn_to_end_length/2)==0}+ # 2つ分残るように
 					na.().select_rand(2)
 				case t.hour
 				when 20..23, 0..1
@@ -340,7 +349,7 @@ module GreetingCases
 				tabunn_nohazu
 			},
 			add_process: lambda{|s, t|
-				"#{roughly_time_to_s(t)}の#{t.min}分#{t.sec}秒#{s}"
+				"#{t.roughly_time_slot}の#{t.hour}時#{t.min}分#{t.sec}秒#{s}"
 			},
 		),
 		Pattern.new(
@@ -349,7 +358,7 @@ module GreetingCases
 				tabunn_nohazu
 			},
 			add_process: lambda{|s, t|
-				"#{roughly_time_to_s(t)}#{s}"
+				"#{t.roughly_time}#{s}"
 			},
 		),
 		Pattern.new(
@@ -647,18 +656,25 @@ bot.message{|event|
 			break res
 		end
 	}
+	processed_response = match_data.pattern.add_process(response, time)
 	
 	# 後処理
 	last_greeting[last_greeting_key] = LastGreetingValue.new(Time.now, response)
 	puts time
 	puts "#{msg}\n=> #{response}"
-	event.respond match_data.pattern.add_process(response, time)
+	
+	if TESTMODE
+		puts "\"#{processed_response}\"(TESTMODE)"
+	else
+		event.respond processed_response
+	end
 }
 
 
 bot.ready{|event|bot.game = "挨拶bot|n.help 導入サーバー数#{bot.servers.count}"}
 
 bot.server_create{|event|
+	next if TESTMODE
 	puts "", event.server.name+"に参加しました。"
 	(event.server.default_channel||event.server.text_channels.first)
 		.send_message(
