@@ -4,6 +4,11 @@ TOKEN = ARGV[1]
 TESTMODE = ARGV[2] == "-t"
 puts "[client_id] [token] [|-t]"
 
+
+MAX_MSG_LENGTH = 50
+MAX_MSG_BACK_QUOTE_COUNT = 2
+
+
 require "timeout"
 
 require "discordrb"
@@ -447,9 +452,6 @@ LastGreetingKey = Struct.new(:channel, :pattern)
 LastGreetingValue = Struct.new(:time, :response)
 last_greeting = {}
 
-MAX_MSG_LENGTH = 50
-MAX_MSG_BACK_QUOTE_COUNT = 2
-
 bot.message{|event|
 	puts "#{Time.now.strftime("%F %T %3N")} @#{event.author.name} : #{event.server.name} ##{event.channel.name}"
 	# 前処理など
@@ -462,8 +464,12 @@ bot.message{|event|
 		Time.now
 	end
 	
-	if msg.length>=(MAX_MSG_LENGTH*2) && !isdebug
-		puts "(#{MAX_MSG_LENGTH*2}文字を超えるメッセージのためカット(処理軽減のため早期カット))"
+	if msg.length>=(MAX_MSG_LENGTH) && !isdebug
+		puts "(#{MAX_MSG_LENGTH}文字を超えるメッセージのためカット)"
+		next
+	end
+	if msg.count("`") >= MAX_MSG_BACK_QUOTE_COUNT
+		puts "(バッククオートが#{MAX_MSG_BACK_QUOTE_COUNT}つ以上含まれるためカット)"
 		next
 	end
 	
@@ -504,14 +510,6 @@ bot.message{|event|
 	end
 	if event.author.bot_account?
 		puts "#{msg} => (botからのメッセージのためカット)"
-		next
-	end
-	if msg.length>=MAX_MSG_LENGTH
-		puts "#{msg} => (#{MAX_MSG_LENGTH}文字を超えるメッセージのためカット)"
-		next
-	end
-	if msg.count("`") >= MAX_MSG_BACK_QUOTE_COUNT
-		puts "#{msg} => (バッククオートが#{MAX_MSG_BACK_QUOTE_COUNT}つ以上含まれるためカット)"
 		next
 	end
 	if (Time.now-match_data.pattern.skip < last_greeting[last_greeting_key].time) && !isdebug
