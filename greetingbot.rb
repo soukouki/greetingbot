@@ -235,7 +235,7 @@ module GreetingCases
 		),
 		Pattern.new(
 			regexp: /
-				こ#{nobi}?ん#{nobi}?ば#{nobi}?$|
+				こ#{nobi}?ん#{nobi}?ば#{nobi}?(ん#{nobi}?[はわ]|$)|
 				(^|#{nobi})ば#{nobi}?ん#{nobi}?(わ|は|#{nobi})/xo,
 			skip: 60,
 			responses: lambda{|t, md|
@@ -313,7 +313,7 @@ module GreetingCases
 			},
 		),
 		Pattern.new(
-			regexp: /ただい?ま(?![はかと])|(もど|もっど|戻)(り($|だ|で|まし|#{nobi})|#{nobi}?$)/o,
+			regexp: /ただい?ま(#{nobi}|で|$)|(もど|もっど|戻)(り($|だ|で|まし|#{nobi})|#{nobi}?$)/o,
 			responses: lambda{|t, md|
 				["あ、おかえりですー", "おかえりですー", "おかかー", "おかえりなさいませー！"]+
 				["おっかかー", "おかかですー"].select_rand(2)+
