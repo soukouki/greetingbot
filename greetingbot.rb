@@ -30,7 +30,7 @@ module GreetingCases
 	
 	refine Time do
 		def weekday
-			%w[日 月 日 水 木 金 土][wday]
+			%w[日 月 火 水 木 金 土][wday]
 		end
 		
 		def roughly_time_slot
@@ -150,8 +150,8 @@ module GreetingCases
 			[]
 		end
 	end
-	def add_nobi_or_nn_to_end_length
-		6
+	def add_nobi_or_nn_to_end_length str
+		add_nobi_or_nn_to_end(str).length
 	end
 	
 	sink = /[ー～、。・,.！？\-=!? 　]+/
@@ -204,13 +204,13 @@ module GreetingCases
 					morning.()
 				when 11..15
 					["もう#{t.roughly_time}ですよー", "おそようですー"]+
-					na.().select_rand(2)
+					na.().select_rand(3)
 				when 16..17
 					["もう夕方ですよー", "えっと、今は#{t.roughly_time}ですが・・"]+
-					na.().select_rand(2)
+					na.().select_rand(3)
 				else
 					["えっと、今は夜ですよ・・？まさか・・・", "えっと、今は#{t.roughly_time}ですが・・"]+
-					na.().select_rand(2)
+					na.().select_rand(3)
 				end
 			},
 		),
@@ -244,10 +244,10 @@ module GreetingCases
 					night.()
 				when 4..9
 					["もう朝ですー", "もう#{t.roughly_time}ですよー", "・・・チュンチュン:bird:"]+
-					na.().select_rand(2) # na側を減らしてもう朝です側を少し増やす
+					na.().select_rand(3)
 				else
-					["もう昼ですー！", "#{t.roughly_time}ですよー！"]+
-					na.().select_rand(1)
+					["まだ昼ですー！", "#{t.roughly_time}ですよー！"]+
+					na.().select_rand(3)
 				end
 			},
 		),
