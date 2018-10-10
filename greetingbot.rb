@@ -119,9 +119,19 @@ module GreetingCases
 	end
 	
 	def find text
-		CASES
+		[
+			text,
+			Moji.kata_to_hira(Moji.han_to_zen(text, Moji::HAN_KATA)).tr("A-Z", "a-z"),
+			Romaji.romaji2kana(text),
+		]
 			.lazy
-			.map{|pattern|pattern.match(Moji.kata_to_hira(Moji.han_to_zen(text, Moji::HAN_KATA)).tr("A-Z", "a-z"))}
+			.map do |text_pattern|
+				CASES
+					.lazy
+					.map{|pattern|pattern.match(text_pattern)}
+					.reject{|md|md.nil?}
+					.first
+			end
 			.reject{|md|md.nil?}
 			.first
 	end
@@ -132,8 +142,7 @@ module GreetingCases
 	end
 	
 	
-	# 6倍の重りがついてしまうので、他を増やすか、.sampleをかけるように
-	# といっていたら`ん`の条件分岐のせいでなんとも言えないことに・・うーん
+	# おもりが付いてしまうので add_nobi_or_nn_to_end_length を併用するように
 	def add_nobi_or_nn_to_end str
 		[
 			str,
@@ -275,7 +284,7 @@ module GreetingCases
 			responses: lambda{|t, md|
 				osoyo =
 					["おそよー", "おそよーですー", "おそようですー"]+
-					add_nobi_or_nn_to_end("まだ#{t.roughly_time}ですよ").select{rand(add_nobi_or_nn_to_end_length/2)==0}+ # 2つ分残るように
+					add_nobi_or_nn_to_end("まだ#{t.roughly_time}ですよ").select{rand(add_nobi_or_nn_to_end_length("ですよ")/2)==0}+ # 2つ分残るように
 					na.().select_rand(2)
 				case t.hour
 				when 20..23, 0..1
@@ -405,6 +414,9 @@ module GreetingCases
 					このbotのことを教えてくれます。招待URLもこちらから。
 				`n.test`
 					ボットの自動テストを実行します。
+				`n.ruby [いろいろ]`
+					rubyの公式ドキュメントのリンクを教えてくれます。
+					いろいろの例 : `Random` `Random.new` `Random#rand` `Random::DEFAULT`
 				
 				`こん` と入力してみると？
 				EOS
@@ -441,9 +453,36 @@ module GreetingCases
 						.join("\n")))]
 			},
 		),
+		Pattern.new(
+			regexp: /
+				(?<name>[a-zA-Z_][a-zA-Z0-9_]*){0}
+				(?<operator>\||^|&|<=>|==|===|=~|>|>=|<|<=|<<|>>|\+|-|\*|\/|%|\*\*|~|\+@|-@|\[\]|\[\]=|`|!|!=|!~){0}
+				(?<module_name>\g<name>(?:::\g<name>)*?){0}
+				(?<method_name>\g<name>[!?]?|\g<operator>|\g<name>=){0} # 定数が含まれることに注意
+				\An\.ruby\s+\g<module_name>((?<call>\#|\.|::)\g<method_name>)?\z/xo,
+			responses: lambda{|t, md|
+				encode = ->(s){s.gsub(/([^a-zA-Z0-9])/){"="+$1.ord.to_s(16)}}
+				encoded_module_name = encode.(md[:module_name])
+				encoded_method_name = encode.(md[:method_name]) if md[:method_name]
+				url = case
+				when md[:method_name].nil? # クラス・モジュール
+					"https://docs.ruby-lang.org/ja/latest/class/#{encoded_module_name}.html"
+				when md[:call] == "::" # 定数・クラス・モジュール
+					<<~EOS
+						2つの可能性があります
+							クラス・モジュールの場合 https://docs.ruby-lang.org/ja/latest/class/#{encode.(md[:module_name]+"::"+md[:method_name])}.html
+							定数の場合 https://docs.ruby-lang.org/ja/latest/method/#{encoded_module_name}/c/#{encoded_method_name}.html
+					EOS
+				when md[:call] == "." # 特異メソッド
+					"https://docs.ruby-lang.org/ja/latest/method/#{encoded_module_name}/s/#{encoded_method_name}.html"
+				when md[:call] == "#" # インスタンスメソッド
+					"https://docs.ruby-lang.org/ja/latest/method/#{encoded_module_name}/i/#{encoded_method_name}.html"
+				end
+				[url]
+			}
+		),
 	]
 end
-
 
 
 bot = Discordrb::Bot.new(token: TOKEN, client_id: CLIENT_ID)
@@ -452,8 +491,8 @@ LastGreetingKey = Struct.new(:channel, :pattern)
 LastGreetingValue = Struct.new(:time, :response)
 last_greeting = {}
 
+# 魔境。整理しないといけないなぁ・・・
 bot.message{|event|
-	puts "#{Time.now.strftime("%F %T %3N")} @#{event.author.name} : #{event.server.name} ##{event.channel.name}"
 	# 前処理など
 	content = event.content
 	isdebug = (content =~ /\Ad\d*-/)
@@ -465,35 +504,18 @@ bot.message{|event|
 	end
 	
 	if msg.length>=(MAX_MSG_LENGTH) && !isdebug
-		puts "(#{MAX_MSG_LENGTH}文字を超えるメッセージのためカット)"
+		puts "(#{MAX_MSG_LENGTH}文字を超えるメッセージのためカット)" if isdebug
 		next
 	end
 	if msg.count("`") >= MAX_MSG_BACK_QUOTE_COUNT
-		puts "(バッククオートが#{MAX_MSG_BACK_QUOTE_COUNT}つ以上含まれるためカット)"
+		puts "(バッククオートが#{MAX_MSG_BACK_QUOTE_COUNT}つ以上含まれるためカット)" if isdebug
 		next
 	end
 	
-	match_data = nil
-	# マッチ
-	# バグっぽい何かがあるようなので
-	begin
-		Timeout::timeout 10 do
-			match_data = GreetingCases.find(msg)
-		end
-	rescue Timeout::Error
-		puts "*** timeout ***"
-		puts msg
-	end
-	
-	Timeout::timeout 10 do
-		match_data = GreetingCases.find(Romaji.romaji2kana(msg))
-		unless match_data.nil?
-			puts "#{msg} => ローマ字に変換したらマッチしたよ!"
-		end
-	end if match_data.nil?
+	match_data = GreetingCases.find(msg)
 	
 	if match_data.nil?
-		puts "#{msg} => (マッチしませんでした)" if isdebug
+		puts "#{msg} => (マッチしませんでした)" if isdebug if isdebug
 		next
 	end
 	
@@ -509,11 +531,11 @@ bot.message{|event|
 		next
 	end
 	if event.author.bot_account?
-		puts "#{msg} => (botからのメッセージのためカット)"
+		puts "#{msg} => (botからのメッセージのためカット)" if isdebug
 		next
 	end
 	if (Time.now-match_data.pattern.skip < last_greeting[last_greeting_key].time) && !isdebug
-		puts "#{msg} => (#{event.server.name}の#{event.channel.name}では前回の挨拶から#{match_data[:skip]}秒以内のためカット)"
+		puts "#{msg} => (#{event.server.name}の#{event.channel.name}では前回の挨拶から#{match_data.pattern.skip}秒以内のためカット)"
 		next
 	end
 	

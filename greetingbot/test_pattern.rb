@@ -33,6 +33,8 @@ module GreetingCases
 		"ばん！"=>true,
 		"こんばんは"=>true,
 		"こんばんは～"=>true,
+		"ban."=>false,
+		"どうもクライアント側のバグのようなんです"=>false,
 		# 寝ます系統
 		"ほどほどで寝ますｗ"=>false,
 		"寝ます"=>true,
