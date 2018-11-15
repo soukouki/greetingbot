@@ -415,8 +415,7 @@ module GreetingCases
 				`n.test`
 					ボットの自動テストを実行します。
 				`n.ruby [いろいろ]`
-					rubyの公式ドキュメントのリンクを教えてくれます。
-					いろいろの例 : `Random` `Random.new` `Random#rand` `Random::DEFAULT`
+					詳しくは `n.test` をご覧ください。
 				
 				`こん` と入力してみると？
 				EOS
@@ -457,26 +456,67 @@ module GreetingCases
 			regexp: /
 				(?<name>[a-zA-Z_][a-zA-Z0-9_]*){0}
 				(?<operator>\||^|&|<=>|==|===|=~|>|>=|<|<=|<<|>>|\+|-|\*|\/|%|\*\*|~|\+@|-@|\[\]|\[\]=|`|!|!=|!~){0}
-				(?<module_name>\g<name>(?:::\g<name>)*?){0}
-				(?<method_name>\g<name>[!?]?|\g<operator>|\g<name>=){0} # 定数が含まれることに注意
-				\An\.ruby\s+\g<module_name>((?<call>\#|\.|::)\g<method_name>)?\z/xo,
+				(?<module_name>[A-Z][a-zA-Z_]*){0}
+				(?<nested_module_name>\g<module_name>(?:::\g<module_name>)*?){0}
+				(?<method_name>\g<name>[!?]?|\g<operator>|\g<name>=){0}
+				(?<const_name>[A-Z_]+){0}
+				(?<variable_name>[~*$?!@\/\\;,=:<>"'.&+`]|-\w|[A-Za-z_][A-Za-z0-9_]*|[0-9]+){0}
+				\An\.ruby\s+\g<nested_module_name>(::\g<const_name>|(?<call>\#|\.|\.\#)\g<method_name>)?\z|
+				\An\.ruby\s+\$\g<variable_name>\z|
+				\An\.ruby\s+(?<help>help)\z/xo,
 			responses: lambda{|t, md|
-				encode = ->(s){s.gsub(/([^a-zA-Z0-9])/){"="+$1.ord.to_s(16)}}
-				encoded_module_name = encode.(md[:module_name])
-				encoded_method_name = encode.(md[:method_name]) if md[:method_name]
-				url = case
-				when md[:method_name].nil? # クラス・モジュール
-					"https://docs.ruby-lang.org/ja/latest/class/#{encoded_module_name}.html"
-				when md[:call] == "::" # 定数・クラス・モジュール
-					<<~EOS
-						2つの可能性があります
-							クラス・モジュールの場合 https://docs.ruby-lang.org/ja/latest/class/#{encode.(md[:module_name]+"::"+md[:method_name])}.html
-							定数の場合 https://docs.ruby-lang.org/ja/latest/method/#{encoded_module_name}/c/#{encoded_method_name}.html
+				p md
+				if md[:help]
+					return [<<~EOS]
+						rubyの公式ドキュメントのリンクを教えてくれます。
+						以下このコマンドの例です。
+						`n.ruby help`
+							このコマンドのヘルプです。
+						`n.ruby Random`
+							`Random`クラスのドキュメントへのリンクを教えてくれます。
+						`n.ruby Random.new`
+							`Random`クラスの`new`特異メソッドのドキュメントへのリンクを教えてくれます。
+							メモ : `[クラス].[メソッド名]`の形で呼び出すメソッドが特異メソッドです。
+						`n.ruby Random#rand`
+							`Random`クラスの`rand`インスタンスメソッドへのドキュメントへのリンクを教えてくれます。
+							メモ : `[クラスのインスタンス].[メソッド名]`の形で呼び出すメソッドがインスタンスメソッドです。
+						`n.ruby Math.sin` または `Math.#sin`
+							`Math`クラスの`sin`モジュール関数へのドキュメントへのリンクを教えてくれます。
+							メモ : `[モジュール].[メソッド名]`の形で呼び出すメソッドがモジュール関数です。
+							メモ : また、`loop{}`や`puts`は`Kernel`モジュールの関数なので、`n.ruby Kernel.#loop`で教えてくれます。
+						`n.ruby Random::DEFAULT`
+							`Random`クラスの`DEFAULT`定数へのドキュメントへのリンクを教えてくれます。
+						`n.ruby $LOAD_PATH`
+							特殊変数`$LOAD_PATH`のドキュメントへのリンクを教えてくれます。
+						反応しない場合は、入力の仕方が間違っているか、こちら側のバグが考えられます。
 					EOS
-				when md[:call] == "." # 特異メソッド
-					"https://docs.ruby-lang.org/ja/latest/method/#{encoded_module_name}/s/#{encoded_method_name}.html"
+				end
+				encode = ->(s){s.gsub(/([^a-zA-Z0-9_])/){"="+$1.ord.to_s(16)}}
+				md[:nested_module_name] && encoded_module_name   = encode.(md[:nested_module_name])
+				md[:method_name]        && encoded_method_name   = encode.(md[:method_name])
+				md[:const_name]         && encoded_const_name    = encode.(md[:const_name])
+				md[:variable_name]      && encoded_variable_name = encode.(md[:variable_name])
+				url = case
+				when md[:const_name] # 定数
+					<<~EOS
+						2つの可能性があります。
+							クラス・モジュールの場合 https://docs.ruby-lang.org/ja/latest/class/#{encode.(md[:nested_module_name]+"::"+md[:const_name])}.html
+							定数の場合 https://docs.ruby-lang.org/ja/latest/method/#{encoded_module_name}/c/#{encoded_const_name}.html
+					EOS
+				when md[:call] == "." # 特異メソッド or モジュール関数
+					<<~EOS
+						2つの可能性があります。
+							特異メソッドの場合 https://docs.ruby-lang.org/ja/latest/method/#{encoded_module_name}/s/#{encoded_method_name}.html
+							モジュール関数の場合 https://docs.ruby-lang.org/ja/latest/method/#{encoded_module_name}/m/#{encoded_method_name}.html
+					EOS
 				when md[:call] == "#" # インスタンスメソッド
 					"https://docs.ruby-lang.org/ja/latest/method/#{encoded_module_name}/i/#{encoded_method_name}.html"
+				when md[:call] == ".\#" # モジュール関数
+					"https://docs.ruby-lang.org/ja/latest/method/#{encoded_module_name}/m/#{encoded_method_name}.html"
+				when md[:variable_name] # 特殊変数
+					"https://docs.ruby-lang.org/ja/latest/method/Kernel/v/#{encoded_variable_name}.html"
+				else # クラス・モジュール
+					"https://docs.ruby-lang.org/ja/latest/class/#{encoded_module_name}.html"
 				end
 				[url]
 			}
@@ -551,7 +591,7 @@ bot.message{|event|
 	# 後処理
 	last_greeting[last_greeting_key] = LastGreetingValue.new(Time.now, response)
 	puts time
-	puts "#{msg}\n=> #{response}"
+	puts "#{msg}\n=> #{response}(#{event.server.name}の#{event.channel.name})"
 	
 	if TESTMODE
 		puts "\"#{processed_response}\"(TESTMODE)"

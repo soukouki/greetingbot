@@ -35,6 +35,7 @@ module GreetingCases
 		"こんばんは～"=>true,
 		"ban."=>false,
 		"どうもクライアント側のバグのようなんです"=>false,
+		"ハロウィン"=>false,
 		# 寝ます系統
 		"ほどほどで寝ますｗ"=>false,
 		"寝ます"=>true,
@@ -135,6 +136,29 @@ module GreetingCases
 		"今何分？"=>true,
 		"いまなんどきだい？"=>true,
 		"いまは何秒？"=>true,
-		# テストケース以上
-	}
+		# n.ruby
+		"n.ruby help"=>true,
+		"n.ruby Aaa"=>true,
+		"n.ruby Aaa::Bbb"=>true,
+		"n.ruby Aaa::Bbb::Ccc"=>true,
+		"n.ruby Aaa.bb"=>true,
+		"n.ruby Aaa::Bbb.cc"=>true,
+		"n.ruby Aaa#bb"=>true,
+		"n.ruby Aaa::Bbb#cc"=>true,
+		"n.ruby Aaa#+"=>true,
+		"n.ruby Aaa#+@"=>true,
+		"n.ruby Aaa#`"=>true,
+		"n.ruby Aaa.#bb"=>true,
+		"n.ruby $1"=>true,
+		"n.ruby $1234"=>true,
+		"n.ruby $LOAD_PATH"=>true,
+		"n.ruby $--"=>false,
+		"n.ruby $"=>false,
+		"n.ruby $-aa"=>false,
+	}.merge(
+		["$!", "$\"", "$$", "$&", "$'", "$*", "$+", "$,", "$-0", "$/", "$-F", "$;", "$:", "$.", "$<", "$=", "$>", "$?", "$@", "$\\", "$`", "$~"]
+			.map{|s|["n.ruby #{s}", true]}
+			.to_h
+	)
+	# テストケース以上
 end
