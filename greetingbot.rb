@@ -176,12 +176,12 @@ module GreetingCases
 	}
 	morning = ->{
 		["おはようですー", "あ、おはようですー", "おっはー", "おはー", "おはようございますー！"]+
-		["おはようなぎ"].select_rand(4)
+		["おはようなぎ"].select_rand(4)+
 		na.()
 	}
 	daytime = ->{
 		["あ、こん", "こんですー", "こんにちはー", "やっはろー", "はろー！", "こんにちはー！"]+
-		["こんスタンティノープル"].select_rand(4)
+		["こんスタンティノープル"].select_rand(4)+
 		["cons"].select_rand(10)+
 		na.()
 	}
@@ -225,9 +225,9 @@ module GreetingCases
 		),
 		Pattern.new(
 			regexp: /
-				こ#{nobi}?ん#{nobi}?(に#{nobi}?(#{nobi}|ち)|ち|です)|(^|#{nobi}|#{sink})こん$|
-				(^|#{sink})(?<!こー)ど(う|#{nobi}|)も|
-				^.{,5}(hello|はろ).{,5}$|
+				こ#{nobi}?ん#{nobi}?(に#{nobi}?(#{nobi}|ち)|ち|です)|(^|#{nobi})こん#{nobi}?$|
+				(^|#{sink})(?<!こー)ど(う|#{nobi}|)も(#{nobi}|[どで]|$)|
+				^.{,5}(hello|はろ(?!うぃん)).{,5}$|
 				^(hi#{sink}?|ひ)$|
 				^ち[わは]/xo,
 			skip: 60,
@@ -245,7 +245,7 @@ module GreetingCases
 		Pattern.new(
 			regexp: /
 				こ#{nobi}?ん#{nobi}?ば#{nobi}?(ん#{nobi}?[はわ]|$)|
-				(^|#{nobi})ば#{nobi}?ん#{nobi}?(わ|は|#{nobi})/xo,
+				(^|#{nobi})ば#{nobi}?ん#{nobi}?(わ|は|#{nobi}|$)/xo,
 			skip: 60,
 			responses: lambda{|t, md|
 				case t.hour
@@ -263,6 +263,7 @@ module GreetingCases
 		Pattern.new(
 			regexp: /
 				(では|じゃ(ぁ|あ|))(おつ|乙)|
+				(おつ|乙)(#{nobi}|$)|
 				(?<!が)(落|お)ち($|ま|る([わねか]))|
 				^(落|お)ちる(?!に)/xo,
 			responses: lambda{|t, md|
@@ -278,7 +279,7 @@ module GreetingCases
 		),
 		Pattern.new(
 			regexp: /
-				((?<![で])寝|(^|#{nobi}|#{sink})ね)(ます|よ|て(?!な|る(?!ー|ね|$))|る(ね(?!る)|#{nobi}|$))|
+				((?<![で])寝|(^|#{nobi}|#{sink})ね)(ます|よ|て(?!な|る(?!ー|ね|$))|る(ね(?!る)|か|#{nobi}|$))|
 				お(やす|休)み|(眠|ねむ)([りる]|い(?!け))|💤|zzz/xo,
 			skip: 60,
 			responses: lambda{|t, md|
@@ -300,7 +301,7 @@ module GreetingCases
 		),
 		Pattern.new(
 			regexp: /
-				(?<!い)(つか|疲)れ[たま]|
+				(?<!い|を)(つか|疲)れ[たま]|
 				(?<!ら)お(疲|つか)れ(?!の)|
 				(^|は|#{nobi})(乙|おつ)($|で|か|し|#{nobi})/xo,
 			skip: 60,
@@ -369,7 +370,9 @@ module GreetingCases
 			},
 		),
 		Pattern.new(
-			regexp: /(今|い#{nobi}?ま)#{nobi}?は?#{nobi}?(何|な#{nobi}?ん)#{nobi}?(時|じ|どき)/o,
+			regexp: /
+				(今|い#{nobi}?ま)#{nobi}?は?#{nobi}?(何|な#{nobi}?ん)#{nobi}?(時|じ|どき)|
+				(今|いま)(の(時間|じかん))?(は|は?(([零〇一二三四五六七八九十]+|\d+)(時|じ)?))(?!ー)#{nobi}$/xo,
 			responses: lambda{|t, md|
 				tabunn_nohazu
 			},
@@ -387,7 +390,22 @@ module GreetingCases
 			},
 		),
 		Pattern.new(
-			regexp: /<@#{CLIENT_ID}>/o,
+			regexp: /メリー?クリ(スマス|#{nobi}?$)|merry (christ|x'?)mas/o,
+			skip: 30,
+			responses: lambda{|t,md|
+				["メリクリ～！", "メリクリ！", "メリークリスマス！"]+
+				["ケーキ！ケーキ！チキン！チキン！"].select_rand(5)
+			},
+		),
+		Pattern.new(
+			regexp: /(あ|明)け(まして)?おめ|ハッピーニューイヤー|happy new year/o,
+			skip: 30,
+			responses: lambda{|t,md|
+				["あけおめ～！", "あけましておめでとー！", "ハッピニューイヤー！", "新年明けましておめでとうございます！\n今年もよろしくおねがいします！"]
+			},
+		),
+		Pattern.new(
+			regexp: /<@!?#{CLIENT_ID}>/o,
 			responses: lambda{|t, md|
 				helpmsg = "コマンドの一覧なら`n.help`"
 				case t.hour
@@ -415,7 +433,16 @@ module GreetingCases
 				`n.test`
 					ボットの自動テストを実行します。
 				`n.ruby [いろいろ]`
-					詳しくは `n.test` をご覧ください。
+					詳しくは `n.ruby help` をご覧ください。
+				
+				※ログ収集について
+					処理改善のため、このボットが反応したり、特別なプレフィックスを付けた発言に限り、ログを収集します。
+					ご了承願います。
+				
+				※おわび
+					1月1日0時ちょうど~0時40分ごろ
+						新年のメッセージがスパムのように連呼されてしまいました。
+						申し訳ございませんでした。
 				
 				`こん` と入力してみると？
 				EOS
@@ -470,24 +497,32 @@ module GreetingCases
 					return [<<~EOS]
 						rubyの公式ドキュメントのリンクを教えてくれます。
 						以下このコマンドの例です。
+						
 						`n.ruby help`
 							このコマンドのヘルプです。
+							
 						`n.ruby Random`
 							`Random`クラスのドキュメントへのリンクを教えてくれます。
+							
 						`n.ruby Random.new`
 							`Random`クラスの`new`特異メソッドのドキュメントへのリンクを教えてくれます。
 							メモ : `[クラス].[メソッド名]`の形で呼び出すメソッドが特異メソッドです。
+							
 						`n.ruby Random#rand`
 							`Random`クラスの`rand`インスタンスメソッドへのドキュメントへのリンクを教えてくれます。
 							メモ : `[クラスのインスタンス].[メソッド名]`の形で呼び出すメソッドがインスタンスメソッドです。
+							
 						`n.ruby Math.sin` または `Math.#sin`
 							`Math`クラスの`sin`モジュール関数へのドキュメントへのリンクを教えてくれます。
 							メモ : `[モジュール].[メソッド名]`の形で呼び出すメソッドがモジュール関数です。
 							メモ : また、`loop{}`や`puts`は`Kernel`モジュールの関数なので、`n.ruby Kernel.#loop`で教えてくれます。
+							
 						`n.ruby Random::DEFAULT`
 							`Random`クラスの`DEFAULT`定数へのドキュメントへのリンクを教えてくれます。
+							
 						`n.ruby $LOAD_PATH`
 							特殊変数`$LOAD_PATH`のドキュメントへのリンクを教えてくれます。
+							
 						反応しない場合は、入力の仕方が間違っているか、こちら側のバグが考えられます。
 					EOS
 				end
@@ -580,12 +615,12 @@ bot.message{|event|
 	end
 	
 	responses = match_data.pattern.responses(time, match_data.match_data)
-	response = loop{
+	response = loop do
 		res = responses.sample
 		if res!=last_greeting[last_greeting_key].response || responses.length<=1
 			break res
 		end
-	}
+	end
 	processed_response = match_data.pattern.add_process(response, time)
 	
 	# 後処理
@@ -606,7 +641,7 @@ bot.ready{|event|bot.game = "挨拶bot|n.help 導入サーバー数#{bot.servers
 bot.server_create{|event|
 	next if TESTMODE
 	puts "", event.server.name+"に参加しました。"
-	(event.server.default_channel||event.server.text_channels.first)
+	(p event.server.default_channel||event.server.text_channels.first)
 		.send_message(
 			<<~EOS
 				#{GreetingCases.greeting}。詳しくは`n.help`にて！
@@ -617,7 +652,10 @@ bot.server_create{|event|
 }
 
 
-# 初回のfindは正規表現を組み立てたりするので時間がかかるため、起動時に正規表現を組み立てるように
-puts GreetingCases.greeting("n.test")
+Thread.new do
+	# 初回のfindは正規表現を組み立てたりするので時間がかかるため、起動時に正規表現を組み立てるように
+	puts GreetingCases.greeting("n.test")
+end
+
 
 bot.run
