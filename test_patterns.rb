@@ -63,6 +63,7 @@ module GreetingCases
 		"zzz"=>true,
 		":zzz:"=>true,
 		"そろそろ寝るかなぁ"=>true,
+		"永久にnagizzzです"=>false,
 		# おつかれ系統
 		"追いつかれたんじゃ？"=>false,
 		"おつかれ"=>true,
