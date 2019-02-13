@@ -145,38 +145,47 @@ module GreetingCases
 	
 	sink = /[ー～、。・,.！？\-=!? 　]+/
 	nobi = /([ぁぃぅぇぉっ]|#{sink})+/
-	na = ->{
+	christmas = ->(t){
+		["メリクリ～！", "メリクリ！", "メリークリスマス！"]+
+		["ケーキ！ケーキ！チキン！チキン！"].select_rand(5)
+	}
+	new_year = ->(t){
+		["あけおめ～！", "あけましておめでとー！", "ハッピニューイヤー！", "新年明けましておめでとうございます！\n今年もよろしくおねがいします！"]
+	}
+	na = ->(t){
 		["ハロロース！"]+
 		["なー", "なー！", "はにゃー！"].select_rand(2)+
 		["ハロロロース！", "はっにゃにゃー！", "はっにゃー！"].select_rand(8)+
 		["ハムロース！", "はにゃにゃにゃにゃーー！"].select_rand(15)+
 		["豚ロース！"].select_rand(30)+
 		["ロースかつ丼"].select_rand(100)+
+		((christmas.(t) if t.month==10 && t.day==31) || []) +
+		((new_year.(t) if (t.month==12 && t.day==31 && t.hour > 20) or (t.month==1 && t.day==1)) || [])+
 		[]
 	}
-	morning = ->{
+	morning = ->(t){
 		["おはようですー", "あ、おはようですー", "おっはー", "おはー", "おはようございますー！"]+
 		["おはようなぎ"].select_rand(4)+
-		na.()
+		na.(t)
 	}
-	daytime = ->{
+	daytime = ->(t){
 		["あ、こん", "こんですー", "こんにちはー", "やっはろー", "はろー！", "こんにちはー！"]+
 		["こんスタンティノープル"].select_rand(4)+
 		["cons"].select_rand(10)+
-		na.()
+		na.(t)
 	}
-	night = ->{
+	night = ->(t){
 		["こんですー", "あ、こんですー", "こんばんはー", "こんばんはー！"]+
 		["こんばんわに", "こんばんわんこ"].select_rand(8)+
-		na.()
+		na.(t)
 	}
-	good_night = ->{
+	good_night = ->(t){
 		["おやすみですー", "おやすみなさいですー", "おつです。おやすみですー", "おつかれさまでした！"]+
 		["おやすみんみんぜみー"].select_rand(3)
 	}
-	late_night_drop = ->{
+	late_night_drop = ->(t){
 		["長時間お疲れ様ですー！", ".....:zzz:"]+
-		good_night.().select_rand(2)
+		good_night.(t).select_rand(2)
 	}
 	tabunn_nohazu = [
 		"です", "・・・です", "です・・たぶん", "・・・です・・たぶん", "・・・たぶん",
@@ -190,16 +199,16 @@ module GreetingCases
 			responses: lambda{|t, md|
 				case t.hour
 				when 4..10
-					morning.()
+					morning.(t)
 				when 11..15
 					["もう#{t.roughly_time}ですよー", "おそようですー"]+
-					na.().select_rand(3)
+					na.(t).select_rand(3)
 				when 16..17
 					["もう夕方ですよー", "えっと、今は#{t.roughly_time}ですが・・"]+
-					na.().select_rand(3)
+					na.(t).select_rand(3)
 				else
 					["えっと、今は夜ですよ・・？まさか・・・", "えっと、今は#{t.roughly_time}ですが・・"]+
-					na.().select_rand(3)
+					na.(t).select_rand(3)
 				end
 			},
 		),
@@ -214,11 +223,11 @@ module GreetingCases
 			responses: lambda{|t, md|
 				case t.hour
 				when 9..16
-					daytime.()
+					daytime.(t)
 				when 17..23, 0..3
-					night.()
+					night.(t)
 				else
-					morning.()
+					morning.(t)
 				end
 			}
 		),
@@ -230,13 +239,13 @@ module GreetingCases
 			responses: lambda{|t, md|
 				case t.hour
 				when 16..23, 0..3
-					night.()
+					night.(t)
 				when 4..9
 					["もう朝ですー", "もう#{t.roughly_time}ですよー", "・・・チュンチュン:bird:"]+
-					na.().select_rand(3)
+					na.(t).select_rand(3)
 				else
 					["まだ昼ですー！", "#{t.roughly_time}ですよー！"]+
-					na.().select_rand(3)
+					na.(t).select_rand(3)
 				end
 			},
 		),
@@ -249,9 +258,9 @@ module GreetingCases
 			responses: lambda{|t, md|
 				case t.hour
 				when 21..23, 0..1
-					good_night.()
+					good_night.(t)
 				when 2..5
-					late_night_drop.()
+					late_night_drop.(t)
 				else
 					["あ、乙ですー", "おつかれさまでした！", "乙ー", "おつですー！"]
 				end
@@ -266,12 +275,12 @@ module GreetingCases
 				osoyo =
 					["おそよー", "おそよーですー", "おそようですー"]+
 					add_nobi_or_nn_to_end("まだ#{t.roughly_time}ですよ").select{rand(add_nobi_or_nn_to_end_length("ですよ")/2)==0}+ # 2つ分残るように
-					na.().select_rand(2)
+					na.(t).select_rand(2)
 				case t.hour
 				when 20..23, 0..1
-					good_night.()+["あ、おやすみですー", "自分はまだ起きてますねー"]
+					good_night.(t)+["あ、おやすみですー", "自分はまだ起きてますねー"]
 				when 2..8
-					late_night_drop.()
+					late_night_drop.(t)
 				when 9..15
 					osoyo
 				when 16..19
@@ -299,7 +308,7 @@ module GreetingCases
 			skip: 300, # 挨拶は若干遅れてもやると思うので、skip:は長め
 			responses: lambda{|t, md|
 				["はっじめまっしてー！", "初めましてー", "はじめましてですー", "よろしくー！", "よろしくですー！"]+
-				na.().select_rand(4)
+				na.(t).select_rand(4)
 			},
 		),
 		Pattern.new(
@@ -373,16 +382,22 @@ module GreetingCases
 			regexp: /メリー?クリ(スマス|#{nobi}?$)|merry (christ|x'?)mas/o,
 			skip: 60*4,
 			responses: lambda{|t,md|
-				["メリクリ～！", "メリクリ！", "メリークリスマス！"]+
-				["ケーキ！ケーキ！チキン！チキン！"].select_rand(5)
+				christmas.(t)
 			},
 		),
 		Pattern.new(
 			regexp: /(あ|明)け(まして)?おめ|ハッピーニューイヤー|happy new year/o,
 			skip: 60*4,
 			responses: lambda{|t,md|
-				["あけおめ～！", "あけましておめでとー！", "ハッピニューイヤー！", "新年明けましておめでとうございます！\n今年もよろしくおねがいします！"]
+				new_year.(t)
 			},
+		),
+		Pattern.new(
+			regexp: /^お前を消す方法$/,
+			skip: 60,
+			responses: lambda do |t,md|
+				["そんなー", "消さないでくださいよー"]
+			end,
 		),
 		Pattern.new(
 			regexp: /<@!?394876010438328321>/o,

@@ -10,11 +10,13 @@ module GreetingCases
 		"ほーい"=>false,
 		"ただいまから復活薬を破格の..."=>false,
 		"なっ"=>false,
-		"おーはーよー"=>true,
-		"おはざまー"=>true,
 		"ただいま△△です"=>false, # ○だとゼロとかぶる
 		"はっじめましてー"=>true,
+		"お前を消す方法"=>true,
+		
 		# こんなど
+		"おーはーよー"=>true,
+		"おはざまー"=>true,
 		"かばんさんこんですー"=>true,
 		"アイコン"=>false,
 		"コンストラクタ"=>false,
@@ -45,6 +47,7 @@ module GreetingCases
 		"ban"=>false,
 		"あ、こんー"=>true,
 		"こんな機能を"=>false,
+		
 		# 寝ます系統
 		"ほどほどで寝ますｗ"=>false,
 		"寝ます"=>true,
@@ -64,6 +67,7 @@ module GreetingCases
 		":zzz:"=>true,
 		"そろそろ寝るかなぁ"=>true,
 		"永久にnagizzzです"=>false,
+		
 		# おつかれ系統
 		"追いつかれたんじゃ？"=>false,
 		"おつかれ"=>true,
@@ -75,6 +79,7 @@ module GreetingCases
 		"そしておつー"=>true,
 		"嘘をつかれた"=>false,
 		"うそをつかれました"=>false,
+		
 		# 行ってきます系統
 		"奪い返しに行くからな"=>false,
 		"あ、んじゃそっちにいくね"=>true,
@@ -141,6 +146,7 @@ module GreetingCases
 		"素敵な提督で嬉しいのね。伊十九なの。そう、イクって呼んでもいいの！"=>false,
 		"イクイクイク"=>false,
 		"唐突のお手洗い"=>false,
+		
 		# 今何日?何時?
 		"きょーうーはーなーんーにーちーでーすーかー！"=>true,
 		"いーまーなーんーにーちーだったーっけー"=>true,
@@ -162,6 +168,7 @@ module GreetingCases
 		"いま？3時"=>false,
 		"三時だよー"=>false,
 		"三時に"=>false,
+		
 		# クリスマス
 		"メリークリスマス"=>true,
 		"メリクリ"=>true,
@@ -169,6 +176,7 @@ module GreetingCases
 		"メリクリウス"=>false,
 		"Merry X'mas"=>true,
 		"Merry Christmas"=>true,
+		
 		# 新年
 		"あけましておめでとうございます"=>true,
 		"明けましておめでとうございます"=>true,
@@ -178,6 +186,7 @@ module GreetingCases
 		"ハッピーニューイヤー！"=>true,
 		"Happy New Year"=>true,
 		"新年、明けましておめでとうございます。"=>true,
+		
 		# n.ruby
 		"n.ruby help"=>true,
 		"n.ruby Aaa"=>true,

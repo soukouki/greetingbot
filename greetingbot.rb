@@ -41,7 +41,7 @@ bot.message{|event|
 	# ログ出力
 	print(
 		"#{Time.now} : "+
-		"#{event.server&.name || "DM"}(#{event.server.id}) "+
+		"#{event.server&.name || "DM"}(#{event.server&.id || "DM"}) "+
 		"# #{event.channel.name}(#{event.channel.id}) "+
 		"@ #{event.author.distinct}(#{event.author.id})(bot?:#{event.author.bot_account?})    \r"
 	)
@@ -71,7 +71,7 @@ bot.message{|event|
 		next
 	end
 	unless bot.profile.on(event.server).permission?(:send_messages, event.channel)
-		puts "#{msg} => (#{event.server.name}の#{event.channel.name}ではbotの権限が足りないためカット)" if isdebug
+		puts "#{msg} => (#{event.server&.name}の#{event.channel.name}ではbotの権限が足りないためカット)" if isdebug
 		next
 	end
 	
@@ -92,7 +92,7 @@ bot.message{|event|
 	puts "regexp : #{match_data.pattern.regexp}" if isdebug
 	
 	if (Time.now-match_data.pattern.skip < last_greeting[last_greeting_key].time) && !isdebug
-		puts "#{msg} => (#{event.server.name}の#{event.channel.name}では前回の挨拶から#{match_data.pattern.skip}秒以内のためカット)"
+		puts "#{msg} => (#{event.server&.name}の#{event.channel.name}では前回の挨拶から#{match_data.pattern.skip}秒以内のためカット)"
 		next
 	end
 	
@@ -101,7 +101,7 @@ bot.message{|event|
 	response = if responses.length <= 1
 		responses.sample
 	else
-		(responses - last_greeting[last_greeting_key].response).sample
+		(responses - [last_greeting[last_greeting_key].response]).sample
 	end
 	
 	processed_response = match_data.pattern.add_process(response, time)
@@ -111,7 +111,7 @@ bot.message{|event|
 	
 	# 出力
 	puts time
-	puts "#{msg}\n=> #{response}(#{event.server.name}の#{event.channel.name})"
+	puts "#{msg}\n=> #{response}(#{event.server&.name}の#{event.channel.name})"
 	if TESTMODE
 		puts "\"#{processed_response}\"(TESTMODE)"
 	else
@@ -136,4 +136,4 @@ bot.server_create{|event|
 }
 
 
-bot.sync
+bot.run
