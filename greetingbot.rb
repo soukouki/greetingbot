@@ -89,7 +89,7 @@ bot.message{|event|
 	puts content+" : デバッグモード。skip判定を飛ばします" if isdebug
 	
 	# スキップ処理
-	puts "regexp : #{match_data.pattern.regexp}" if isdebug
+	puts "regexp : #{match_data.pattern.regexp.inspect}" if isdebug
 	
 	if (Time.now-match_data.pattern.skip < last_greeting[last_greeting_key].time) && !isdebug
 		puts "#{msg} => (#{event.server&.name}の#{event.channel.name}では前回の挨拶から#{match_data.pattern.skip}秒以内のためカット)"
@@ -120,7 +120,9 @@ bot.message{|event|
 }
 
 
-bot.ready{|event|bot.game = "挨拶bot|n.help 導入サーバー数#{bot.servers.count}"}
+bot.ready{|event|
+	bot.game = "挨拶bot|n.help 導入サーバー数#{bot.servers.count}"
+}
 
 bot.server_create{|event|
 	next if TESTMODE
@@ -133,6 +135,7 @@ bot.server_create{|event|
 				This bot run only Japanese text.
 			EOS
 		)
+	bot.game = "挨拶bot|n.help 導入サーバー数#{bot.servers.count}"
 }
 
 

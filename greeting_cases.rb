@@ -73,7 +73,7 @@ module GreetingCases
 	
 	class Pattern
 		attr_reader :regexp, :skip
-		def initialize regexp:, skip: 0, responses:, add_process: ->(s, t){s}
+		def initialize regexp:, skip: 20, responses:, add_process: ->(s, t){s}
 			@regexp = regexp
 			@skip = skip
 			@responses = responses
@@ -157,8 +157,7 @@ module GreetingCases
 		["なー", "なー！", "はにゃー！"].select_rand(2)+
 		["ハロロロース！", "はっにゃにゃー！", "はっにゃー！"].select_rand(8)+
 		["ハムロース！", "はにゃにゃにゃにゃーー！"].select_rand(15)+
-		["豚ロース！"].select_rand(30)+
-		["ロースかつ丼"].select_rand(100)+
+		["豚ロース！", "ハロロースかつ丼"].select_rand(150)+
 		((christmas.(t) if t.month==10 && t.day==31) || []) +
 		((new_year.(t) if (t.month==12 && t.day==31 && t.hour > 20) or (t.month==1 && t.day==1)) || [])+
 		[]
@@ -169,7 +168,7 @@ module GreetingCases
 		na.(t)
 	}
 	daytime = ->(t){
-		["あ、こん", "こんですー", "こんにちはー", "やっはろー", "はろー！", "こんにちはー！"]+
+		["あ、こん", "こんですー", "こんにちはー", "やっはろー", "はろー！", "こんにちはー！", "こんちはー！"]+
 		["こんスタンティノープル"].select_rand(4)+
 		["cons"].select_rand(10)+
 		na.(t)
@@ -184,7 +183,7 @@ module GreetingCases
 		["おやすみんみんぜみー"].select_rand(3)
 	}
 	late_night_drop = ->(t){
-		["長時間お疲れ様ですー！", ".....:zzz:"]+
+		["長時間お疲れ様ですー！", ".....:zzz:", "よ、夜遅くまでお疲れ様ですー・・・"]+
 		good_night.(t).select_rand(2)
 	}
 	tabunn_nohazu = [
@@ -194,7 +193,10 @@ module GreetingCases
 	
 	CASES = [
 		Pattern.new(
-			regexp: /おっ?#{sink}?は($|#{nobi}|よ|ざ)/o,
+			# おはよう
+			regexp: /
+				(?<!ばい)おっ?#{sink}?は($|#{nobi}|よ|ざ)|
+				むにゃ$|(むにゃ){2,}/xo,
 			skip: 60,
 			responses: lambda{|t, md|
 				case t.hour
@@ -207,17 +209,21 @@ module GreetingCases
 					["もう夕方ですよー", "えっと、今は#{t.roughly_time}ですが・・"]+
 					na.(t).select_rand(3)
 				else
-					["えっと、今は夜ですよ・・？まさか・・・", "えっと、今は#{t.roughly_time}ですが・・"]+
+					["えっと、今は夜ですよ・・？", "えっと、今は#{t.roughly_time}ですが・・","もう夜ですよー！"]+
 					na.(t).select_rand(3)
 				end
 			},
 		),
 		Pattern.new(
+			# こんにちは
 			regexp: /
-				こ#{nobi}?ん#{nobi}?(に#{nobi}?(#{nobi}|ち)|ち|です)|(^|#{nobi})こん#{nobi}?$|
+				(?<!あい)こ#{nobi}?ん#{nobi}?(に#{nobi}?(#{nobi}|ち)|ち|です)|(^|#{nobi})こん#{nobi}?$|
 				(^|#{sink})(?<!こー)ど(う|#{nobi}|)も(#{nobi}|[どで]|$)|
-				^.{,5}(hello|はろ(?!うぃん)).{,5}$|
-				^(hi#{sink}?|ひ)$|
+				\A.{,3}(hello|はろ(?!うぃん|り)).{,3}\Z|
+				\A.+はろー#{nobi}\Z|
+				\Aはろー.+\Z|
+				^(おっす)+$|
+				\A(hi#{sink}?|ひ)\Z|
 				^ち[わは]/xo,
 			skip: 60,
 			responses: lambda{|t, md|
@@ -232,6 +238,7 @@ module GreetingCases
 			}
 		),
 		Pattern.new(
+			# こんばんは
 			regexp: /
 				こ#{nobi}?ん#{nobi}?ば#{nobi}?(ん#{nobi}?[はわ]|$)|
 				(^|#{nobi})ば#{nobi}?ん#{nobi}?(わ|は|#{nobi}|$)/xo,
@@ -250,10 +257,11 @@ module GreetingCases
 			},
 		),
 		Pattern.new(
+			# 乙、落ちます
 			regexp: /
 				(では|じゃ(ぁ|あ|))(おつ|乙)|
 				(おつ|乙)(#{nobi}|$)|
-				(?<!が)(落|お)ち($|ま|る([わねか]))|
+				(?<![ながい]|する)(落|お)ち($|ま|る([わねか]))|
 				^(落|お)ちる(?!に)/xo,
 			responses: lambda{|t, md|
 				case t.hour
@@ -262,14 +270,18 @@ module GreetingCases
 				when 2..5
 					late_night_drop.(t)
 				else
-					["あ、乙ですー", "おつかれさまでした！", "乙ー", "おつですー！"]
+					["あ、乙ですー", "おつかれさまでした！", "乙ー", "おつですー！", "おつかれさまでしたー！"]
 				end
 			},
 		),
 		Pattern.new(
+			# おやすみ
 			regexp: /
-				((?<![で])寝|(^|#{nobi}|#{sink})ね)(ます|よ|て(?!な|る(?!ー|ね|$))|る(ね(?!る)|か|#{nobi}|$))|
-				お(やす|休)み|(眠|ねむ)([りる]|い(?!け))|💤|\bzzz\b/xo,
+				((?<![で])寝|(^|#{nobi}|#{sink})ね)(ます|よ|て($|#{nobi}|る[ねー])|る(ね(?!る)|か(?!も)|#{nobi}|$))|
+				お(やす|休)み|
+				(眠|ねむ)([りる]|い(?!け))|
+				💤|
+				\bzzz\b/xo,
 			skip: 60,
 			responses: lambda{|t, md|
 				osoyo =
@@ -289,9 +301,10 @@ module GreetingCases
 			},
 		),
 		Pattern.new(
+			# おつかれさまでした
 			regexp: /
-				(?<!い|を)(つか|疲)れ[たま]|
-				(?<!ら)お(疲|つか)れ(?!の)|
+				(?<!い|を)(つか|疲)れ(?!って|て|たこと(とか)?は?ない)|
+				(?<!ら)お(疲|つか)れ(?!の|た)|
 				(^|は|#{nobi})(乙|おつ)($|で|か|し|#{nobi})/xo,
 			skip: 60,
 			responses: lambda{|t, md|
@@ -304,6 +317,7 @@ module GreetingCases
 			},
 		),
 		Pattern.new(
+			# はじめまして
 			regexp: /(初|はっ?じ)めまして/o,
 			skip: 300, # 挨拶は若干遅れてもやると思うので、skip:は長め
 			responses: lambda{|t, md|
@@ -312,6 +326,7 @@ module GreetingCases
 			},
 		),
 		Pattern.new(
+			# ただいま
 			regexp: /ただい?ま(#{nobi}|で|$)|(もど|もっど|戻)(り($|だ|で|まし|#{nobi})|#{nobi}?$)/o,
 			responses: lambda{|t, md|
 				["あ、おかえりですー", "おかえりですー", "おかかー", "おかえりなさいませー！"]+
@@ -321,9 +336,15 @@ module GreetingCases
 			},
 		),
 		Pattern.new(
+			# いってきます
 			regexp: /
-				((^|[にらは]|#{sink}|#{nobi})(?<!で)い|(?<!どうやって|くらい|後|日|で)行)
-					(きま|っ?て(くる|き(ま|$))|く(ね|か(?!な|行|い|ら)|#{sink}|#{nobi}|$))(?<!っ)|
+				(
+					(
+						(^|[にらは]|#{sink}|#{nobi})(?<!で)い|
+						(?<!どうやって|くらい|後|日|で)行
+					)
+					(きま(?!した)|っ?て(くる|き(?!た|ました))|く(?!って)(ね|か(?!な|行|い|ら)|#{sink}|#{nobi}|$))
+				)|
 				(?<![なの])(といれ|お(手|て)(洗|あら)い|お(花|はな)(摘|つ)み|(雉|きじ)((撃|う)ち|(狩|が|か)り))#{nobi}?#{sink}?$|
 				(出|で)かけて/xo,
 			responses: lambda{|t, md|
@@ -350,7 +371,7 @@ module GreetingCases
 			},
 		),
 		Pattern.new(
-			regexp: /(今|い#{nobi}?ま)#{nobi}?は?#{nobi}?(何|な#{nobi}?ん)#{nobi}?(分|ふん|秒|びょう)/o,
+			regexp: /(今|い#{nobi}?ま)#{nobi}?は?#{nobi}?(何|な#{nobi}?ん)#{nobi}?(分|ふん|秒|びょう)(?!分|残)/o,
 			responses: lambda{|t, md|
 				tabunn_nohazu
 			},
@@ -360,7 +381,7 @@ module GreetingCases
 		),
 		Pattern.new(
 			regexp: /
-				(今|い#{nobi}?ま)#{nobi}?は?#{nobi}?(何|な#{nobi}?ん)#{nobi}?(時|じ|どき)|
+				(今|い#{nobi}?ま)#{nobi}?は?#{nobi}?(何|な#{nobi}?ん)#{nobi}?(時|じ|どき)(?!分|残)|
 				(今|いま)(の(時間|じかん))?(は|は?(([零〇一二三四五六七八九十]+|\d+)(時|じ)?))(?!ー)#{nobi}$/xo,
 			responses: lambda{|t, md|
 				tabunn_nohazu
@@ -370,7 +391,7 @@ module GreetingCases
 			},
 		),
 		Pattern.new(
-			regexp: /(今|い#{nobi}?ま|今日|き#{nobi}?ょ(#{nobi}?う)?)#{nobi}?は?#{nobi}?(何|な#{nobi}?ん)#{nobi}?(日|に#{nobi}?ち)/o,
+			regexp: /(今|い#{nobi}?ま|今日|き#{nobi}?ょ(#{nobi}?う)?)#{nobi}?は?#{nobi}?(何|な#{nobi}?ん)#{nobi}?(日|に#{nobi}?ち)(?!分|残)/o,
 			responses: lambda{|t, md|
 				tabunn_nohazu
 			},
@@ -380,14 +401,14 @@ module GreetingCases
 		),
 		Pattern.new(
 			regexp: /メリー?クリ(スマス|#{nobi}?$)|merry (christ|x'?)mas/o,
-			skip: 60*4,
+			skip: 60*10,
 			responses: lambda{|t,md|
 				christmas.(t)
 			},
 		),
 		Pattern.new(
 			regexp: /(あ|明)け(まして)?おめ|ハッピーニューイヤー|happy new year/o,
-			skip: 60*4,
+			skip: 60*10,
 			responses: lambda{|t,md|
 				new_year.(t)
 			},
@@ -429,6 +450,8 @@ module GreetingCases
 					ボットの自動テストを実行します。
 				`n.ruby [いろいろ]`
 					詳しくは `n.ruby help` をご覧ください。
+				`n.bots`
+					兄弟ボットを紹介します！ぜひ導入してみてください！
 				
 				`こん` と入力してみると？
 				EOS
@@ -436,6 +459,7 @@ module GreetingCases
 		),
 		Pattern.new(
 			regexp: /^n\.info$/o,
+			skip: 0,
 			responses: lambda{|t, md|
 				[
 					"`@sou7#0094`(soukouki)が作ったbotですー。",
@@ -477,6 +501,7 @@ module GreetingCases
 				\An\.ruby\s+\g<nested_module_name>(::\g<const_name>|(?<call>\#|\.|\.\#)\g<method_name>)?\z|
 				\An\.ruby\s+\$\g<variable_name>\z|
 				\An\.ruby\s+(?<help>help)\z/xo,
+			skip: 0,
 			responses: lambda{|t, md|
 				p md
 				if md[:help]
@@ -540,6 +565,48 @@ module GreetingCases
 					"https://docs.ruby-lang.org/ja/latest/class/#{encoded_module_name}.html"
 				end
 				[url]
+			}
+		),
+		Pattern.new(
+			regexp: /^n\.solve\s+(.+)$/o,
+			skip: 0,
+			responses: lambda{|t, md|
+				require_relative "./solve_liner"
+				puts "方程式解くよ！"
+				text = md[1]
+				p "#{text}"
+				a = SolveLiner.parse(text)
+				pp a
+				b = SolveLiner.solve(a[:a], a[:b])
+				pp b
+				if b.kind_of?(String)
+					puts b
+					return [b]
+				end
+				ret = SolveLiner.to_s(b, a[:vars])
+				p ret
+				["解けたー！`#{ret}`"]
+			},
+		),
+		Pattern.new(
+			regexp: /^n\.bots$/o,
+			responses: lambda{|t,md|
+				[<<~EOS]
+					兄弟bot一覧！
+					__Greetingbot__
+						挨拶botです！挨拶に関してはかなりのものだと思ってます！
+							導入url : <https://discordapp.com/oauth2/authorize?client_id=394876010438328321&scope=bot&permissions=2048>
+							prefix : `n.`
+					__M-putit__
+						気象・地震・津波情報関連のbotです！気象庁が発表する色んな情報をチャンネルに流せます！(設定に時間がかかります。ご了承ください)
+							導入url <https://discordapp.com/oauth2/authorize?scope=bot&client_id=505357370306592788&permissions=2048>
+							prefix : `m.`
+					__BlockKing__
+						:crossed_swords: **アイテムを集めてクラフトし、強力な剣で王座を狙うゲームです！** :fire:
+							導入url : <https://discordapp.com/oauth2/authorize?client_id=555753809834409987&permissions=2048&scope=bot>
+							公式サーバー(プレイもできる) : <https://discord.gg/nJ5QVJu>
+							prefix : `B`
+				EOS
 			}
 		),
 	]
