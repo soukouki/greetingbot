@@ -122,7 +122,6 @@ module GreetingCases
 	end
 	
 	
-	# おもりが付いてしまうので add_nobi_or_nn_to_end_length を併用するように
 	def add_nobi_or_nn_to_end str
 		[
 			str,
@@ -138,9 +137,6 @@ module GreetingCases
 		else
 			[]
 		end
-	end
-	def add_nobi_or_nn_to_end_length str
-		add_nobi_or_nn_to_end(str).length
 	end
 	
 	sink = /[ー～、。・,.！？\-=!? 　]+/
@@ -186,9 +182,8 @@ module GreetingCases
 		["長時間お疲れ様ですー！", ".....:zzz:", "よ、夜遅くまでお疲れ様ですー・・・"]+
 		good_night.(t).select_rand(2)
 	}
-	tabunn_nohazu = [
-		"です", "・・・です", "です・・たぶん", "・・・です・・たぶん", "・・・たぶん",
-		"のはず・・です", "のはず・・です・・・たぶん", "のはず・・・たぶん"
+	desu = [
+		"です", "です！", "ですー", "ですー！", "！"
 	]
 	
 	CASES = [
@@ -203,14 +198,17 @@ module GreetingCases
 				when 4..10
 					morning.(t)
 				when 11..15
-					["もう#{t.roughly_time}ですよー", "おそようですー"]+
-					na.(t).select_rand(3)
+					["もう#{t.roughly_time}ですよー"].select_rand(3)+
+					["もう#{t.roughly_time_slot}ですよー", "おそようですー"]+
+					na.(t).sample(3)
 				when 16..17
-					["もう夕方ですよー", "えっと、今は#{t.roughly_time}ですが・・"]+
-					na.(t).select_rand(3)
+					["えっと、今は#{t.roughly_time}ですが・・"].select_rand(3)+
+					["もう夕方ですよー", "えっと、今は#{t.roughly_time_slot}ですが・・"]+
+					na.(t).sample(3)
 				else
-					["えっと、今は夜ですよ・・？", "えっと、今は#{t.roughly_time}ですが・・","もう夜ですよー！"]+
-					na.(t).select_rand(3)
+					["えっと、今は#{t.roughly_time}ですが・・"].select_rand(3)+
+					["えっと、今は夜ですよ・・？", "えっと、今は#{t.roughly_time_slot}ですが・・","もう夜ですよー！"]+
+					na.(t).sample(3)
 				end
 			},
 		),
@@ -232,6 +230,10 @@ module GreetingCases
 					daytime.(t)
 				when 17..23, 0..3
 					night.(t)
+				when 4..6
+					morning.(t).select_rand(3)+
+					morning.(t).select_rand(3).map{|s|s+"早起きはいいぞ！"}+
+					morning.(t).select_rand(6).map{|s|s+"早起きは三文の得！"}
 				else
 					morning.(t)
 				end
@@ -248,11 +250,13 @@ module GreetingCases
 				when 16..23, 0..3
 					night.(t)
 				when 4..9
-					["もう朝ですー", "もう#{t.roughly_time}ですよー", "・・・チュンチュン:bird:"]+
-					na.(t).select_rand(3)
+					["もう#{t.roughly_time}ですよー"].select_rand(3)+
+					["もう朝ですー", "もう#{t.roughly_time_slot}ですよー", "・・・チュンチュン:bird:"]+
+					na.(t).sample(3)
 				else
-					["まだ昼ですー！", "#{t.roughly_time}ですよー！"]+
-					na.(t).select_rand(3)
+					["#{t.roughly_time}ですよー！"].select_rand(3)+
+					["まだ昼ですー！", "#{t.roughly_time_slot}ですよー！"]+
+					na.(t).sample(2)
 				end
 			},
 		),
@@ -279,15 +283,16 @@ module GreetingCases
 			regexp: /
 				((?<![で])寝|(^|#{nobi}|#{sink})ね)(ます|よ|て($|#{nobi}|る[ねー])|る(ね(?!る)|か(?!も)|#{nobi}|$))|
 				お(やす|休)み|
-				(眠|ねむ)([りる]|い(?!け))|
+				(眠|ねむ)([たる]|り(?!の)|い(?!け))|
+				^ねむ$|
 				💤|
 				\bzzz\b/xo,
 			skip: 60,
 			responses: lambda{|t, md|
 				osoyo =
 					["おそよー", "おそよーですー", "おそようですー"]+
-					add_nobi_or_nn_to_end("まだ#{t.roughly_time}ですよ").select{rand(add_nobi_or_nn_to_end_length("ですよ")/2)==0}+ # 2つ分残るように
-					na.(t).select_rand(2)
+					add_nobi_or_nn_to_end("まだ#{t.roughly_time}ですよ").sample(2)+
+					na.(t).sample(2)
 				case t.hour
 				when 20..23, 0..1
 					good_night.(t)+["あ、おやすみですー", "自分はまだ起きてますねー"]
@@ -310,24 +315,42 @@ module GreetingCases
 			responses: lambda{|t, md|
 				case t.hour
 				when 9..23
-					["おつかれさまです！", "おつかれさまでした！", "おつです"]
+					["おつかれさまです！", "おつかれさまでした！", "おつです", "おつです！"]
 				when 0..8
-					["遅くまでおつかれさまです！", "遅くまでお疲れ様です！", "おつかれさまです、おやすみです"]
+					["遅くまでおつかれさまです！", "遅くまでお疲れ様です！", "おつかれさまです、おやすみです", "おつです！おやすみです！", "乙です！おやすみですー"]
 				end
 			},
 		),
 		Pattern.new(
 			# はじめまして
 			regexp: /(初|はっ?じ)めまして/o,
-			skip: 300, # 挨拶は若干遅れてもやると思うので、skip:は長め
+			skip: 900, # 挨拶は若干遅れてもやると思うので、skip:は長め
 			responses: lambda{|t, md|
 				["はっじめまっしてー！", "初めましてー", "はじめましてですー", "よろしくー！", "よろしくですー！"]+
-				na.(t).select_rand(4)
+				na.(t).sample(2)
+			},
+		),
+		Pattern.new(
+			# よろしく
+			regexp: /^よろ#{nobi}|宜しく|よろ(しく|で)|夜露死苦/o,
+			skip: 300, # 挨拶は若干遅れてもやると思うので、skip:は長め
+			responses: lambda{|t, md|
+				case t.hour
+				when 9..16
+					daytime.(t)
+				when 17..23, 0..3
+					night.(t)
+				else
+					morning.(t)
+				end +
+				["よろしくです！", "よろしくですー！", "よろです！", "よろー"]
 			},
 		),
 		Pattern.new(
 			# ただいま
-			regexp: /ただい?ま(#{nobi}|で|$)|(もど|もっど|戻)(り($|だ|で|まし|#{nobi})|#{nobi}?$)/o,
+			regexp: /
+				ただい?ま(#{nobi}|で|$)|(もど|もっど|戻)(り($|だ|で|まし|#{nobi})|#{nobi}?$)|
+				^がこおわ/xo,
 			responses: lambda{|t, md|
 				["あ、おかえりですー", "おかえりですー", "おかかー", "おかえりなさいませー！"]+
 				["おっかかー", "おかかですー"].select_rand(2)+
@@ -371,9 +394,9 @@ module GreetingCases
 			},
 		),
 		Pattern.new(
-			regexp: /(今|い#{nobi}?ま)#{nobi}?は?#{nobi}?(何|な#{nobi}?ん)#{nobi}?(分|ふん|秒|びょう)(?!分|残)/o,
+			regexp: /(今|い#{nobi}?ま)#{nobi}?(は|って)?#{nobi}?(何|な#{nobi}?ん)#{nobi}?(分|ふん|秒|びょう)(?!分|残)/o,
 			responses: lambda{|t, md|
-				tabunn_nohazu
+				desu
 			},
 			add_process: lambda{|s, t|
 				"#{t.roughly_time_slot}の#{t.hour}時#{t.min}分#{t.sec}秒#{s}"
@@ -381,19 +404,19 @@ module GreetingCases
 		),
 		Pattern.new(
 			regexp: /
-				(今|い#{nobi}?ま)#{nobi}?は?#{nobi}?(何|な#{nobi}?ん)#{nobi}?(時|じ|どき)(?!分|残)|
+				(今|い#{nobi}?ま)#{nobi}?(は|って)?#{nobi}?(何|な#{nobi}?ん)#{nobi}?(時|じ|どき)(?!分|残)|
 				(今|いま)(の(時間|じかん))?(は|は?(([零〇一二三四五六七八九十]+|\d+)(時|じ)?))(?!ー)#{nobi}$/xo,
 			responses: lambda{|t, md|
-				tabunn_nohazu
+				desu
 			},
 			add_process: lambda{|s, t|
 				"#{t.roughly_time}#{s}"
 			},
 		),
 		Pattern.new(
-			regexp: /(今|い#{nobi}?ま|今日|き#{nobi}?ょ(#{nobi}?う)?)#{nobi}?は?#{nobi}?(何|な#{nobi}?ん)#{nobi}?(日|に#{nobi}?ち)(?!分|残)/o,
+			regexp: /(今|い#{nobi}?ま|今日|き#{nobi}?ょ(#{nobi}?う)?)#{nobi}?(は|って)?#{nobi}?(何|な#{nobi}?ん)#{nobi}?((日|に#{nobi}?ち)(?!分|残)|(曜日|ようび))/o,
 			responses: lambda{|t, md|
-				tabunn_nohazu
+				desu
 			},
 			add_process: lambda{|s, t|
 				"#{t.year}年#{t.month}月#{t.day}日で#{t.weekday}曜日#{s}"
@@ -483,10 +506,16 @@ module GreetingCases
 				sel = TEST_PATTERN
 					.map{|s,event|[s,event,!!(find(s)) == event]}
 					.select{|s,event,r|!r}
-				["テスト\n"+
-					((sel.empty?)? "すべて成功 全#{TEST_PATTERN.length}パターン" : (sel
-						.map{|s,event,r|"#{s}\n\t期待 : #{event}"}
-						.join("\n")))]
+				res = if sel.empty?
+					"テストはすべて成功でした！(全#{TEST_PATTERN.length}パターン)"
+				else
+					"失敗したテストがあります。(全#{TEST_PATTERN.length}パターン中、失敗#{sel.length}パターン)\n"+
+						sel
+							.map{|s,event,r|"#{s}\n\t期待 : #{event}"}
+							.join("\n")
+							.yield_self{|s|"```\m"+s+"```"}
+				end
+				[res]
 			},
 		),
 		Pattern.new(
