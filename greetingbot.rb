@@ -14,7 +14,7 @@ MAX_MSG_LENGTH = 50
 MAX_MSG_BACK_QUOTE_COUNT = 2
 
 
-require "timeout"
+require "csv"
 
 require "discordrb"
 require "moji"
@@ -39,12 +39,11 @@ last_greeting = {}
 # 魔境。整理しないといけないなぁ・・・
 bot.message{|event|
 	# ログ出力
-	print(
-		"#{Time.now} : "+
-		"#{event.server&.name || "DM"}(#{event.server&.id || "DM"}) "+
-		"# #{event.channel.name}(#{event.channel.id}) "+
-		"@ #{event.author.distinct}(#{event.author.id})(bot?:#{event.author.bot_account?})    \r"
-	)
+	debug_log = "#{Time.now} : "+
+	"#{event.server&.name || "DM"}(#{event.server&.id || "DM"}) "+
+	"# #{event.channel.name}(#{event.channel.id}) "+
+	"@ #{event.author.distinct}(#{event.author.id})(bot?:#{event.author.bot_account?})        \r"
+	print(debug_log)
 	
 	
 	# 前処理
@@ -117,9 +116,14 @@ bot.message{|event|
 	else
 		event.respond processed_response
 	end
+	
+	log_file = File.expand_path(File.dirname(__FILE__))+"/responses_log.csv"
+	CSV.open(log_file, "a") do |csv|
+		csv << [debug_log, msg, processed_response]
+	end
 }
 
-
+ 
 bot.ready{|event|
 	bot.game = "挨拶bot|n.help 導入サーバー数#{bot.servers.count}"
 }

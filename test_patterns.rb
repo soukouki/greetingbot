@@ -2,7 +2,7 @@
 module GreetingCases
 	# {"テストする文字列", マッチするかどうか(boolean)}
 	TEST_PATTERN = {
-		# その他
+		# パターンが少ない or 仕様確認
 		"あいう"=>false,
 		"こん"=>true,
 		"コン"=>true,
@@ -13,6 +13,15 @@ module GreetingCases
 		"ただいま△△です"=>false, # ○だとゼロとかぶる
 		"はっじめましてー"=>true,
 		"お前を消す方法"=>true,
+		
+		# 未分類
+		"眠たい" => true,
+		"眠たい()" => true,
+		"うぅ眠い" => true,
+		"ねむ" => true,
+		"よろしく" => true,
+		"よろしくです！" => true,
+		"京都行ってきた" => true,
 		
 		# こんなど
 		"おーはーよー"=>true,
@@ -82,6 +91,7 @@ module GreetingCases
 		"むにゃむにゃ"=>true,
 		"猫がむにゃぁって"=>false,
 		"おやすみ"=>true,
+		"眠りの概念" => false,
 		
 		# おつかれ系統
 		"追いつかれたんじゃ？"=>false,
@@ -103,6 +113,8 @@ module GreetingCases
 		"聞いて疲れたことはない"=>false,
 		"聞いて疲れたことはいい思い出"=>true,
 		"別に疲れてないけど"=>false,
+		"がこおわ" => true,
+		"がこおわ！" => true,
 		
 		# 行ってきます系統
 		"奪い返しに行くからな"=>false,
@@ -178,6 +190,7 @@ module GreetingCases
 		"本気で勝ちにいく"=>true,
 		"はいきましたーっ！"=>false,
 		"5人ほどに通知行きました"=>false,
+		"テストでかけてみるわ" => false,
 		
 		# 今何日?何時?
 		"きょーうーはーなーんーにーちーでーすーかー！"=>true,
