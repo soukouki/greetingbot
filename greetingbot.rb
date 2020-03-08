@@ -123,7 +123,12 @@ bot.message{|event|
 
  
 bot.ready{|event|
-	bot.game = "挨拶bot|n.help 導入サーバー数#{bot.servers.count}"
+	next unless SHARD_ID == 0
+	b = Discordrb::Bot.new(token: TOKEN)
+	b.run true
+	servers_count = b.servers.count
+	b.stop
+	bot.game = "挨拶bot|n.help 導入サーバー数#{servers_count}"
 }
 
 bot.server_create{|event|
