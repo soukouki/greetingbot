@@ -20,8 +20,10 @@ module GreetingCases
 		# こんなど
 		"おーはーよー"=>true,
 		"おはざまー"=>true,
+		"グッモーニン"=>true,
 		"かばんさんこんですー"=>true,
 		"アイコン"=>false,
+		"コンデンスミルク"=>false,
 		"コンストラクタ"=>false,
 		"どうもー"=>true,
 		"ちわー"=>true,
@@ -90,6 +92,7 @@ module GreetingCases
 		"眠たい()" => true,
 		"うぅ眠い" => true,
 		"ねむ" => true,
+		"寝るか〇〇するか"=>false,
 		
 		# おつかれ系統
 		"追いつかれたんじゃ？"=>false,
@@ -113,6 +116,19 @@ module GreetingCases
 		"別に疲れてないけど"=>false,
 		"がこおわ" => true,
 		"がこおわ！" => true,
+		"otu"=>true,
+		
+		# おめでとう系統
+		"やった"=>true,
+		"やた！"=>true,
+		"やった！"=>true,
+		"できた"=>true,
+		"できた！！"=>true,
+		"おめ"=>true,
+		
+		# ありがとう系統
+		"ありがとう"=>true,
+		"どういたしまして"=>true,
 		
 		# 行ってきます系統
 		"奪い返しに行くからな"=>false,
@@ -189,6 +205,7 @@ module GreetingCases
 		"はいきましたーっ！"=>false,
 		"5人ほどに通知行きました"=>false,
 		"テストでかけてみるわ" => false,
+		"行きません"=>false,
 		
 		# よろしく系統
 		"よろしく" => true,
@@ -201,6 +218,8 @@ module GreetingCases
 		"よろしくおねがいします"=>true,
 		"宜しくおねがいします"=>true,
 		"どうぞよろしくお願いいたします。"=>true,
+		"よろしくない"=>false,
+		"あまりよろしくない"=>false,
 		
 		# 今何日?何時?
 		"きょーうーはーなーんーにーちーでーすーかー！"=>true,

@@ -7,7 +7,6 @@ module SolveLiner
 	# "1a+2b=3, 2a=3b+4"
 	# TODO 不定・不能方程式
 	# TODO a,b,c,...#
-	# 戻り値は[左辺の行列, 右辺のベクトル]
 	def parse(text)
 		lmat = []
 		rvec = []
@@ -21,13 +20,13 @@ module SolveLiner
 				ls = l
 					.split(/(?<=[a-z])/)
 					.map do |i|
-						s, n, v = i
+						sign, n, v = i
 							.match(/(\+|-)?(\d+|\d+\/\d+|\d+\.\d+)?([a-z])/)
 							.captures
-						[v, ((s||"")+"1").to_i * (n||"1").to_r]
+						[v, ((sign||"")+"1").to_i * (n||"1").to_r]
 					end
 					.to_h
-				vars |= ls.keys
+				vars ||= ls.keys
 				lmat << vars.map{|v|ls[v]}
 				rvec << r.to_r
 			end
@@ -38,7 +37,7 @@ module SolveLiner
 		}
 	end
 	
-	# aは26列ある各変数の係数
+	# aは各変数の係数
 	# bはイコールの右辺
 	# ( 1, 2 ) (a) = (3)
 	# ( 2, 3 ) (b)   (4)

@@ -1,11 +1,9 @@
 ﻿
-if ARGV[0] == "-t"
-	TESTMODE = true
-	TOKEN = ARGV[1] || "1234abcd"
-else
-	TESTMODE = false
-	TOKEN = ARGV[0]
-end
+TESTMODE = false
+
+SHARDS_COUNT = ARGV[0].to_i
+SHARD_ID = ARGV[1].to_i
+TOKEN = ARGV[2]
 
 puts "[|-t] [token]"
 
@@ -25,7 +23,7 @@ require_relative "./test_patterns"
 require_relative "./greeting_cases"
 
 
-bot = Discordrb::Bot.new(token: TOKEN)
+bot = Discordrb::Bot.new(token: TOKEN, num_shards: SHARDS_COUNT, shard_id: SHARD_ID)
 
 Thread.new do
 	# 初回のfindは正規表現を組み立てたりするので時間がかかるため、起動時に正規表現を組み立てるように
@@ -42,8 +40,8 @@ bot.message{|event|
 	debug_log = "#{Time.now} : "+
 	"#{event.server&.name || "DM"}(#{event.server&.id || "DM"}) "+
 	"# #{event.channel.name}(#{event.channel.id}) "+
-	"@ #{event.author.distinct}(#{event.author.id})(bot?:#{event.author.bot_account?})        \r"
-	print(debug_log)
+	"@ #{event.author.distinct}(#{event.author.id})(bot?:#{event.author.bot_account?})"
+	print(debug_log+"        \r")
 	
 	
 	# 前処理
@@ -119,7 +117,7 @@ bot.message{|event|
 	
 	log_file = File.expand_path(File.dirname(__FILE__))+"/responses_log.csv"
 	CSV.open(log_file, "a") do |csv|
-		csv << [debug_log, msg, processed_response]
+		csv << [msg, processed_response]
 	end
 }
 
@@ -136,7 +134,7 @@ bot.server_create{|event|
 			<<~EOS
 				#{GreetingCases.greeting}。詳しくは`n.help`にて！
 				
-				This bot run only Japanese text.
+				This bot only works in Japanese text.
 			EOS
 		)
 	bot.game = "挨拶bot|n.help 導入サーバー数#{bot.servers.count}"

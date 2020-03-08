@@ -191,7 +191,8 @@ module GreetingCases
 			# おはよう
 			regexp: /
 				(?<!ばい)おっ?#{sink}?は($|#{nobi}|よ|ざ)|
-				むにゃ$|(むにゃ){2,}/xo,
+				むにゃ$|(むにゃ){2,}|
+				ぐっど?もーにん/xo,
 			skip: 60,
 			responses: lambda{|t, md|
 				case t.hour
@@ -218,11 +219,12 @@ module GreetingCases
 				(?<!あい)こ#{nobi}?ん#{nobi}?(に#{nobi}?(#{nobi}|ち)|ち|です)|(^|#{nobi})こん#{nobi}?$|
 				(^|#{sink})(?<!こー)ど(う|#{nobi}|)も(#{nobi}|[どで]|$)|
 				\A.{,3}(hello|はろ(?!うぃん|り)).{,3}\Z|
-				\A.+はろー#{nobi}\Z|
+				\A.+はろー#{nobi}(?!ら)\Z|
 				\Aはろー.+\Z|
 				^(おっす)+$|
 				\A(hi#{sink}?|ひ)\Z|
-				^ち[わは]/xo,
+				^ち[わは]|
+				グッドアフタヌーン/xo,
 			skip: 60,
 			responses: lambda{|t, md|
 				case t.hour
@@ -243,7 +245,8 @@ module GreetingCases
 			# こんばんは
 			regexp: /
 				こ#{nobi}?ん#{nobi}?ば#{nobi}?(ん#{nobi}?[はわ]|$)|
-				(^|#{nobi})ば#{nobi}?ん#{nobi}?(わ|は|#{nobi}|$)/xo,
+				(^|#{nobi})ば#{nobi}?ん#{nobi}?(わ|は|#{nobi}|$)|
+				ぐっど?いぶにんぐ/xo,
 			skip: 60,
 			responses: lambda{|t, md|
 				case t.hour
@@ -265,8 +268,9 @@ module GreetingCases
 			regexp: /
 				(では|じゃ(ぁ|あ|))(おつ|乙)|
 				(おつ|乙)(#{nobi}|$)|
-				(?<![ながい]|する)(落|お)ち($|ま|る([わねか]))|
-				^(落|お)ちる(?!に)/xo,
+				(?<![ながい]|する|予選)(落|お)ち($|ま|る([わねか]))|
+				^(落|お)ちる(?!に)|
+				^otu$/xo,
 			responses: lambda{|t, md|
 				case t.hour
 				when 21..23, 0..1
@@ -289,19 +293,17 @@ module GreetingCases
 				\bzzz\b/xo,
 			skip: 60,
 			responses: lambda{|t, md|
-				osoyo =
-					["おそよー", "おそよーですー", "おそようですー"]+
-					add_nobi_or_nn_to_end("まだ#{t.roughly_time}ですよ").sample(2)+
-					na.(t).sample(2)
 				case t.hour
-				when 20..23, 0..1
+				when 19..23, 0..1
 					good_night.(t)+["あ、おやすみですー", "自分はまだ起きてますねー"]
 				when 2..8
 					late_night_drop.(t)
-				when 9..15
-					osoyo
-				when 16..19
-					osoyo
+				when 9..18
+					[
+						"もう#{t.roughly_time_slot}ですよー！",
+						"なにやってるんですかー！もう#{t.roughly_time_slot}ですよー！",
+						"もー！#{t.roughly_time_slot}ですよー！",
+					]
 				end
 			},
 		),
@@ -326,13 +328,13 @@ module GreetingCases
 			regexp: /(初|はっ?じ)めまして/o,
 			skip: 900, # 挨拶は若干遅れてもやると思うので、skip:は長め
 			responses: lambda{|t, md|
-				["はっじめまっしてー！", "初めましてー", "はじめましてですー", "よろしくー！", "よろしくですー！"]+
+				["はっじめまっしてー！", "はっじめましてー！", "初めましてー", "はじめましてですー", "よろしくー！", "よろしくですー！"]+
 				na.(t).sample(2)
 			},
 		),
 		Pattern.new(
 			# よろしく
-			regexp: /^よろ#{nobi}|宜しく|よろ(しく|で)|夜露死苦/o,
+			regexp: /^よろ#{nobi}|宜しく|よろ(しく(?!ない)|で)|夜露死苦/o,
 			skip: 300, # 挨拶は若干遅れてもやると思うので、skip:は長め
 			responses: lambda{|t, md|
 				case t.hour
@@ -343,19 +345,20 @@ module GreetingCases
 				else
 					morning.(t)
 				end +
-				["よろしくです！", "よろしくですー！", "よろです！", "よろー"]
+				["よろしくです！", "よろしくですー！", "よろです！", "よろー", "よろですー！"]
 			},
 		),
 		Pattern.new(
 			# ただいま
 			regexp: /
 				ただい?ま(#{nobi}|で|$)|(もど|もっど|戻)(り($|だ|で|まし|#{nobi})|#{nobi}?$)|
+				(行|い)って(来|き)た|
 				^がこおわ/xo,
 			responses: lambda{|t, md|
 				["あ、おかえりですー", "おかえりですー", "おかかー", "おかえりなさいませー！"]+
-				["おっかかー", "おかかですー"].select_rand(2)+
-				["おかかおいしいよね"].select_rand(5)+
-				["おかえりなさいませ。ご主人様。"].select_rand(50)
+				["おっかかー", "おかかですー"].select_rand(3)+
+				["おかかおいしいよね"].select_rand(10)+
+				["おかえりなさいませ。ご主人様。", "おかえりなさいませ。ご主人様！"].select_rand(50)
 			},
 		),
 		Pattern.new(
@@ -366,7 +369,7 @@ module GreetingCases
 						(^|[にらは]|#{sink}|#{nobi})(?<!で)い|
 						(?<!どうやって|くらい|後|日|で)行
 					)
-					(きま(?!した)|っ?て(くる|き(?!た|ました))|く(?!って)(ね|か(?!な|行|い|ら)|#{sink}|#{nobi}|$))
+					(きま(?!した|せん)|っ?て(くる|き(?!た|ました))|く(?!って)(ね|か(?!な|行|い|ら)|#{sink}|#{nobi}|$))
 				)|
 				(?<![なの])(といれ|お(手|て)(洗|あら)い|お(花|はな)(摘|つ)み|(雉|きじ)((撃|う)ち|(狩|が|か)り))#{nobi}?#{sink}?$|
 				(出|で)かけて/xo,
@@ -380,6 +383,21 @@ module GreetingCases
 					"いってらっさいですんー",
 				]
 			},
+		),
+		Pattern.new(
+			# おめでとう
+			regexp: /^(おめ|できた|出来た|完成した|やっ?た)($|#{nobi})/,
+			skip: 180,
+			responses: lambda{|t, md|
+				[
+					"おめでとうです！",
+					"おめでとうですー！",
+					"おめです！",
+					"おめですー！",
+					"おめ！",
+					"おめー！",
+				]
+			}
 		),
 		Pattern.new(
 			regexp: /\A\^\^\#\z/o,
@@ -529,7 +547,8 @@ module GreetingCases
 				(?<variable_name>[~*$?!@\/\\;,=:<>"'.&+`]|-\w|[A-Za-z_][A-Za-z0-9_]*|[0-9]+){0}
 				\An\.ruby\s+\g<nested_module_name>(::\g<const_name>|(?<call>\#|\.|\.\#)\g<method_name>)?\z|
 				\An\.ruby\s+\$\g<variable_name>\z|
-				\An\.ruby\s+(?<help>help)\z/xo,
+				\An\.ruby\s+(?<help>help)\z
+			/xo,
 			skip: 0,
 			responses: lambda{|t, md|
 				p md
