@@ -5,9 +5,6 @@ SHARDS_COUNT = ARGV[0].to_i
 SHARD_ID = ARGV[1].to_i
 TOKEN = ARGV[2]
 
-puts "[|-t] [token]"
-
-
 MAX_MSG_LENGTH = 50
 MAX_MSG_BACK_QUOTE_COUNT = 2
 
@@ -121,14 +118,9 @@ bot.message{|event|
 	end
 }
 
- 
+
 bot.ready{|event|
-	next unless SHARD_ID == 0
-	b = Discordrb::Bot.new(token: TOKEN)
-	b.run true
-	servers_count = b.servers.count
-	b.stop
-	bot.game = "挨拶bot|n.help 導入サーバー数#{servers_count}"
+	bot.game = "挨拶bot|n.help"
 }
 
 bot.server_create{|event|
@@ -142,7 +134,6 @@ bot.server_create{|event|
 				This bot only works in Japanese text.
 			EOS
 		)
-	bot.game = "挨拶bot|n.help 導入サーバー数#{bot.servers.count}"
 }
 
 
