@@ -22,11 +22,6 @@ require_relative "./greeting_cases"
 
 bot = Discordrb::Bot.new(token: TOKEN, num_shards: SHARDS_COUNT, shard_id: SHARD_ID)
 
-Thread.new do
-	# 初回のfindは正規表現を組み立てたりするので時間がかかるため、起動時に正規表現を組み立てるように
-	puts GreetingCases.greeting("n.test")
-end
-
 LastGreetingKey = Struct.new(:channel, :pattern)
 LastGreetingValue = Struct.new(:time, :response)
 last_greeting = {}
@@ -34,7 +29,7 @@ last_greeting = {}
 # 魔境。整理しないといけないなぁ・・・
 bot.message{|event|
 	# ログ出力
-	debug_log = "#{Time.now} : "+
+	debug_log = "#{Time.now} @#{SHARD_ID.to_s.rjust(Math.log(SHARDS_COUNT, 10).ceil)} : "+
 	"#{event.server&.name || "DM"}(#{event.server&.id || "DM"}) "+
 	"# #{event.channel.name}(#{event.channel.id}) "+
 	"@ #{event.author.distinct}(#{event.author.id})(bot?:#{event.author.bot_account?})"
@@ -44,6 +39,14 @@ bot.message{|event|
 	# 前処理
 	content = event.content
 	isdebug = (content =~ /\Ad\d*-/)
+	
+	# 多いので先に
+	if event.author.bot_account?
+		puts "#{msg} => (botからのメッセージのためカット)" if isdebug
+		next
+	end
+	
+	# 前処理の続き
 	msg = (isdebug)? content.gsub(/\Ad-\d*/){""} : content
 	time = if isdebug && (content =~ /\Ad\d+-/)
 		now = Time.now
@@ -58,10 +61,6 @@ bot.message{|event|
 	end
 	if msg.count("`") >= MAX_MSG_BACK_QUOTE_COUNT
 		puts "(バッククオートが#{MAX_MSG_BACK_QUOTE_COUNT}つ以上含まれるためカット)" if isdebug
-		next
-	end
-	if event.author.bot_account?
-		puts "#{msg} => (botからのメッセージのためカット)" if isdebug
 		next
 	end
 	unless bot.profile.on(event.server).permission?(:send_messages, event.channel)
